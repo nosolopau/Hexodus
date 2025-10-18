@@ -1,2 +1,28 @@
-out
+# Build directories
+build/
+dist/
+out/
+
+# Compiled class files
+*.class
+
+# JAR files (optional - uncomment if you don't want to track JARs)
+# *.jar
+
+# Log files
+*.log
+
+# OS-specific files
 .DS_Store
+Thumbs.db
+
+# IDE-specific files
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+
+# Ant-specific
+.ant-targets-build.xml
