@@ -16,14 +16,14 @@ import java.util.*;
  *  @version 1.0
  */
 public class Partida{
-    private int NumeroMovimientos;  // Nœmero de movimientos
+    private int NumeroMovimientos;  // Nï¿½mero de movimientos
     private Tablero Tab;            // Referencia al tablero de juego
     private Movimiento [] Mov;      // Vector de movimientos
     private Heuristica Motor;
     
     /** Crea una nueva partida (representada en un objeto tipo Partida)
      *  @param dim  Dimension del tablero de la partida
-     *  @param swap Valor l—gico que indica si est‡ habilitada la jugada swap */
+     *  @param swap Valor lï¿½gico que indica si estï¿½ habilitada la jugada swap */
     public Partida(int dim, boolean swap){
         NumeroMovimientos = 0;
         Tab = new Tablero(dim);
@@ -33,7 +33,7 @@ public class Partida{
         Motor = Fact.NuevaHeuristica(dim, 1, swap);
     }
     
-    /** Pregunta a la heur’stica si debe intercambiarse la primera jugada
+    /** Pregunta a la heurï¿½stica si debe intercambiarse la primera jugada
      *  @param f    Fila de la primera jugada
      *  @param c    Columna de la primera jugada  
      *  @return     Verdadero si debe intercambiarse y falso en otro caso */
@@ -41,15 +41,15 @@ public class Partida{
         return Motor.DecidirIntercambio(f, c);
     }
     
-    /** Establece el nivel de la heur’stica
-     *  @param nivel    El nuevo nivel de la heur’stica */
+    /** Establece el nivel de la heurï¿½stica
+     *  @param nivel    El nuevo nivel de la heurï¿½stica */
     public void EstableceNivel(int nivel) throws NivelIncorrecto{
         if((nivel == 1) || (nivel == 2))
             Motor.EstablecerNivel(nivel);
         else throw new NivelIncorrecto();
     }
     
-    /** Pide a la heur’stica que devuelva el mejor movimiento disponible para
+    /** Pide a la heurï¿½stica que devuelva el mejor movimiento disponible para
      *  el jugador que se pase como argumento
      *  @param j    Jugador para el que calcular la jugada
      *  @return     Un array de dos enteros que representan la fila y la columna respectivamente */
@@ -89,7 +89,7 @@ class Tablero {
     static int J1 = 1;      // Macros para representar el estado de las casillas
     static int J2 = 2;
     static int NINGUNO = 0;
-    private int Dimension;  // Dimensi—n del tablero
+    private int Dimension;  // Dimensiï¿½n del tablero
     private Casilla [][]c;  // Vector de casillas que forman el tablero
     private Borde N;        // Bordes del tablero para conectar las casillas
     private Borde S;
@@ -377,17 +377,17 @@ class Tablero {
 	Borde flag = null;
         Borde con = null;
 				
-	// Primera pasada: observa si algœn vecino est‡ unido con un borde
+	// Primera pasada: observa si algï¿½n vecino estï¿½ unido con un borde
 	for(int i=0; i<max; i++){
             if(lista[i].ObtenerOcupante() == j){    // Si el vecino es una ficha de su mismo color
                 con = lista[i].ObtenerConectada();	
-                if(con != null){                    // Si ese vecino de su color est‡ conectado a algœn borde...
+                if(con != null){                    // Si ese vecino de su color estï¿½ conectado a algï¿½n borde...
                     c[fl][cl].Unir(con);            // ...se conecta al mismo borde
-                    uniones = true;                 // Flag para se–alar que se han realizado uniones en esta pasada
-                    if((unido != null) && (con != unido)) return j;     // Se uni— a dos bordes distintos en dos pasadas diferentes: GANADOR
+                    uniones = true;                 // Flag para seï¿½alar que se han realizado uniones en esta pasada
+                    if((unido != null) && (con != unido)) return j;     // Se uniï¿½ a dos bordes distintos en dos pasadas diferentes: GANADOR
                     if(conexiones){                                     // Otro flag para detectar si se hicieron uniones entre dos casillas unidas a dos bordes diferentes
                         if(flag != lista[i].ObtenerConectada())
-                            return j;                                   // Se uni— en una pasada anterior a un borde distinto del actual: GANADOR
+                            return j;                                   // Se uniï¿½ en una pasada anterior a un borde distinto del actual: GANADOR
                     }
                     else{
                         flag = lista[i].ObtenerConectada();
@@ -422,10 +422,10 @@ class Tablero {
     class Casilla{
         private int Fila;
         private int Columna;
-        private int Identificador;  // Identificador œnico de la casilla
-        private boolean Ocupada;    // Verdadero si est‡ ocupada, Falso en caso contrario
+        private int Identificador;  // Identificador ï¿½nico de la casilla
+        private boolean Ocupada;    // Verdadero si estï¿½ ocupada, Falso en caso contrario
         private Jugador Ocupante;
-        private Borde Conectada;    // Referencia del borde al que estŽ conectada
+        private Borde Conectada;    // Referencia del borde al que estï¿½ conectada
 
         public Casilla(int fl, int cl, int id){
             Fila = fl;
@@ -459,7 +459,7 @@ class Tablero {
             return Columna;
         }
 
-        /** Muestra la casilla por la salida est‡ndar */
+        /** Muestra la casilla por la salida estï¿½ndar */
         public void Mostrar(){
             System.out.println("(" + Fila + ", " + Columna + ")");
         }

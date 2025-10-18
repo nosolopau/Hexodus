@@ -11,27 +11,27 @@ import java.util.*;
 
 
 /**
- *  Representa el motor de juego del programa, encargado de calcular el valor numérico
- *  de cada jugada simulada, construir el árbol de jugadas y devolver la mejor opción
+ *  Representa el motor de juego del programa, encargado de calcular el valor num?rico
+ *  de cada jugada simulada, construir el ?rbol de jugadas y devolver la mejor opci?n
  *  disponible.
  *  Es una clase abstracta para soportar dos posibles implementaciones, ligadas
- *  dinámicamente: una con varios hilos preparada para varios procesadores y otra
- *  monohilo para sistemas de un único procesador.
+ *  din?micamente: una con varios hilos preparada para varios procesadores y otra
+ *  monohilo para sistemas de un ?nico procesador.
  *
  *  @author Pau
  *  @version 1.0
  */
 public abstract class Heuristica {
-    protected int Dimension;    // Dimensión del tablero sobre el que se aplica la heurística
-    protected int ProfMax;      // Profundidad máxima del árbol de búsqueda
-    protected boolean Swap;     // Es verdadero si el intercambio está activado
+    protected int Dimension;    // Dimensi?n del tablero sobre el que se aplica la heur?stica
+    protected int ProfMax;      // Profundidad m?xima del ?rbol de b?squeda
+    protected boolean Swap;     // Es verdadero si el intercambio est? activado
     protected int [][][] Favoritos;
     
     /** Crea una nueva instancia de Heuristica. Inicializa las listas y estructuras
      *  necesarias y define las conexiones entre bordes y el resto del tablero
-     *  @param dimension Dimensión del tablero de juego
+     *  @param dimension Dimensi?n del tablero de juego
      *  @param nivel Nivel de juego
-     *  @param swap Verdadero si la regla swap está activada */
+     *  @param swap Verdadero si la regla swap est? activada */
     public Heuristica(int dimension, int nivel, boolean swap) {
         Dimension = dimension;
         ProfMax = nivel;
@@ -45,7 +45,7 @@ public abstract class Heuristica {
     }
     
     /** Modifica el nivel de juego del sistema
-     *  @param nivel La profundidad del árbol de búsqueda de jugadas */
+     *  @param nivel La profundidad del ?rbol de b?squeda de jugadas */
     public void EstablecerNivel(int nivel){
         ProfMax = nivel;
     }
@@ -71,10 +71,10 @@ public abstract class Heuristica {
 }
 
 /**
- *  Heurística adaptada a sistemas de un único procesador
+ *  Heur?stica adaptada a sistemas de un ?nico procesador
  */
 class Monohilo extends Heuristica{
-    private Simulacion Base;  // Simulación sobre la que se ejecutan las nuevas jugadas
+    private Simulacion Base;  // Simulaci?n sobre la que se ejecutan las nuevas jugadas
     private Casilla MejorMax;
     private Casilla MejorMin;
     
@@ -148,7 +148,7 @@ class Monohilo extends Heuristica{
             
             if(alfa < valor){
                 alfa = valor;
-                if(nivel == ProfMax) // Garantiza que la mejor jugada se genere en el último nivel
+                if(nivel == ProfMax) // Garantiza que la mejor jugada se genere en el ?ltimo nivel
                     MejorMax = c;
             }
 
@@ -191,7 +191,7 @@ class Monohilo extends Heuristica{
 }
 
 /**
- *  Heurística adaptada a sistemas de varios procesadores
+ *  Heur?stica adaptada a sistemas de varios procesadores
  */
 class Multihilo extends Heuristica{
     private Casilla Mejor;
@@ -232,11 +232,11 @@ class Multihilo extends Heuristica{
         double [] r = new double [Dimension*Dimension];
         Celda [] cas = new Celda [Dimension*Dimension];
         
-        /* Para cada posible jugada, crea un hilo que la evalúa junto con todas
+        /* Para cada posible jugada, crea un hilo que la eval?a junto con todas
          * las posibilidades que la siguen */
         ArrayList <Casilla> Libres = Base[0].ObtenerCeldasLibres();
         Iterator <Casilla> lib = Libres.iterator();
-        int i = 0;  // Número de hilos que crea el sistema
+        int i = 0;  // N?mero de hilos que crea el sistema
         while(lib.hasNext()){
             Casilla c1 = lib.next();
             h[i] = new Hilo(Base[i], c1, color);
@@ -253,7 +253,7 @@ class Multihilo extends Heuristica{
             }
         }
 
-        /* Según los valores devueltos por los hilos, y dependiendo de si es
+        /* Seg?n los valores devueltos por los hilos, y dependiendo de si es
          * el jugador que minimiza o maximiza, busca el mejor valor disponible
          * y de vuelve la jugada que lo lleva asociado */
         int indiceMejor = 0;
@@ -343,11 +343,11 @@ class Multihilo extends Heuristica{
     }
     
     /**
-     *  Hilo que ejecuta una búsqueda en el árbol siguiente al movimiento que
+     *  Hilo que ejecuta una b?squeda en el ?rbol siguiente al movimiento que
      *  se le pase en el constructor y devuelve el valor de su rama al procedimiento
      *  que lo invoque. */
     class Hilo extends Thread{
-        private Simulacion Base;    // Simulación de la que parte el hilo
+        private Simulacion Base;    // Simulaci?n de la que parte el hilo
         private int color;          // Color del jugador que ejecuta el movimiento
         private double valor;       // Valor que se asocia a la jugada del hilo
 
@@ -359,7 +359,7 @@ class Multihilo extends Heuristica{
             Base = Sim;
         } 
         
-        /** Ejecuta el hilo, que realiza una búsqueda alfa-beta */
+        /** Ejecuta el hilo, que realiza una b?squeda alfa-beta */
         public void run() {
             switch(color){
             case 1:
