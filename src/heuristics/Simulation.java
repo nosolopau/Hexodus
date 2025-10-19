@@ -1,7 +1,7 @@
 /*
  * Hexodus >> Simulation.java
  *
- * Creado el 29 de marzo de 2007 a las 15:50
+ * Created on March 29, 2007 at 15:50
  *
  * Copyright (C) 2006 - 2008 Pablo Torrecilla. GNU General Public License
  */
@@ -14,7 +14,7 @@ class NonexistentSquare extends Exception{};
 /**
  * Representa la simulacin de una jugada y permite deshacer los cambios de la
  * misma. Se utiliza para calcular el valor numrico de acuerdo con la heurstica correspondiente
- * a la jugada simulada.
+ * for the simulated move.
  *
  * @author Pau
  * @version 10.2
@@ -25,29 +25,29 @@ public class Simulation {
     private HashMap eliminatedNeighbors, eliminatedNeighbors2;
     private ArrayList <Cell> affectedNeighbors ;
     private ArrayList renew;
-    private ArrayList <Cell> G[];         // Lista de casillas G
-    private Connections C[];        // Lista de conexiones virtuales para cada jugador
-    private Connections SC[];       // Lista de semiconexiones virtuales para cada jugador
+    private ArrayList <Cell> G[];         // List of G squares
+    private Connections C[];        // List of virtual connections for each player
+    private Connections SC[];       // List of virtual semi-connections for each player
     private Connections connections;
     private boolean NuevasConnections;   // Almacena si se crearon C o SC en la iteracin anterior
     private Square target;
     private Board board;
     
-    /** Crea los objetos comunes a todas las simulaciones. Este constructor es
+    /** Creates the objects common to all simulations. This constructor is
      *  para uso interno, y por tanto es de mbito privado */
     private Simulation(){
         K = 5;
         
-        /* Crea dos instancias (una para negras y otra para blancas) de los objetos que
-         * se encuentran duplicados para los dos jugadores */
-        G = new ArrayList [2];     // Lista con las casillas 'utilizables' del grafo
-        C = new Connections [2];    // Lista con las conexiones virtuales descubiertas
-        SC = new Connections [2];   // Lista con las semiconexiones virtuales descubiertas
+        /* Creates two instances (one for black and one for white) of the objects that
+         * are duplicated for the two players */
+        G = new ArrayList [2];     // List with the 'usable' squares of the graph
+        C = new Connections [2];    // List with the virtual connections discovered
+        SC = new Connections [2];   // List with the virtual semi-connections discovered
 
     }
     
     /** Crea una simulacin base con el tablero vaco para la dimensin que
-     *  se reciba como argumento.
+     *  is received as argument.
      *  @param dimension Dimensin del tablero de juego */
     public Simulation(int dimension) {
         this();
@@ -60,20 +60,20 @@ public class Simulation {
         connections = board.getConnections();
     }
     
-    /** Crea una nueva instancia de Simulation con una celda objetivo
-     *  que se le pase como argumento
+    /** Creates a new instance of Simulation with a target cell
+     *  that is passed as argument
      *  @param base Simulacin padre
-     *  @param cel Square objetivo
+     *  @param cel Target Square
      *  @param color Color del jugador responsable de la simulacin */
     public Simulation(Simulation base, Square cel, int color) {
         this(base, cel.getRow(), cel.getColumn(), color);
     }
     
-    /** Crea una nueva instancia de Simulation con una celda objetivo
-     *  identificada por su row y column
+    /** Creates a new instance of Simulation with a target cell
+     *  identified by its row and column
      *  @param base Simulacin padre
-     *  @param row Fila de la casilla objetivo
-     *  @param column Columna de la casilla objetivo
+     *  @param row Row of the target square
+     *  @param column Column of the target square
      *  @param color Color del jugador responsable de la simulacin */
     public Simulation(Simulation base, int row, int column, int color) {
         this();
@@ -91,20 +91,20 @@ public class Simulation {
         target = board.get(row, column);
         target.occupy(color);
 
-        ArrayList add = new ArrayList();    // Lista de casillas que hay que agregar como vecinas
-        Cell vec = null;                       // Se usa para recorrer las vecinas de obj
+        ArrayList add = new ArrayList();    // List of squares to be added as neighbors
+        Cell vec = null;                       // Used to iterate over the neighbors of obj
         
         affectedNeighbors = new ArrayList<Cell>();
         eliminatedNeighbors = new HashMap();
         eliminatedNeighbors2 = new HashMap();
         
-        // Iterar sobre las vecinas de la celda que acaba de ocuparse        
+        // Iterate over the neighbors of the cell that was just occupied        
         Iterator <Cell> itv = target.getNeighborList().iterator();
         while(itv.hasNext()){
             vec = itv.next();
             /* Si una vecina es del mismo color que la recin insertada hay que
-             * eliminar la celda antigua (con sus posibles conexiones) y transferir
-             * sus vecinas a la nueva. */
+             * remove the old cell (with its possible connections) and transfer
+             * its neighbors to the new one. */
             ArrayList <Cell> remove2 = new ArrayList<Cell>();
             
             if((vec.getColor() == color) && !(vec instanceof Border)){
@@ -151,8 +151,8 @@ public class Simulation {
             }
         }
         
-        /* Se agregan las vecinas de la lista intermedia. Esto se hace en dos
-         * tiempos para evitar un problema de concurrencia. */
+        /* The neighbors from the intermediate list are added. This is done in two
+         * stages to avoid a concurrency problem. */
         Iterator ita = add.iterator();
         while(ita.hasNext()){
             Cell newNeighbor = (Cell)ita.next();
@@ -161,20 +161,20 @@ public class Simulation {
                 target.addNeighbor(newNeighbor);
                 newNeighbor.addNeighbor(target);
                 
-                connections.insertDirectPath(newNeighbor, target); // antes arriba
+                connections.insertDirectPath(newNeighbor, target); // before above
             }
         }
     }
     
     /** Devuelve la casilla objetivo que estudia la simulacin
-     *  @return Square objetivo de la simulacin */
+     *  @return Target Square de la simulacin */
     public Square getTargetCell(){
         return target;
     }
     
     /** Calcula el valor de la simulacin
-     *  @return Un double con el valor de dividir la resistencia de las blancas entre
-     *  la de las negras */
+     *  @return A double with the value of dividing the white resistance by
+     *  the black resistance */
     public double calculateValue() {
         double r0 = 0, r1 = 0;
         
@@ -194,7 +194,7 @@ public class Simulation {
     }
     
     /** Restaura los datos de la simulacin actual basndose en el historial de
-     *  cambios registrados */
+     *  recorded changes */
     public void restore(){
         target.occupy(-1);
         boolean conectar = false;
@@ -246,15 +246,15 @@ public class Simulation {
     }
     
     /** Devuelve las casillas libres del tablero asociado a la simulacin
-     *  @return ArrayList de casillas libres */
+     *  @return ArrayList of free squares */
     public ArrayList<Square> getFreeCells(){
         return board.getCellsLibres();
     }
     
-    /** Agrega una celda eliminada a la lista para deshacer los cambios
+    /** Adds a removed cell to the list to undo changes
      *  @param m El HashMap al que hay que agregar la celda en cuestin
-     *  @param c Cell que se agregar
-     *  @param vecinas Lista de vecinas de la celda que se agregar */
+     *  @param c Cell to be added
+     *  @param vecinas List of neighbors of the cell to be added */
     private void addRemoved(HashMap m, Cell c, ArrayList vecinas){
         m.put(c, vecinas);
     }
@@ -264,13 +264,13 @@ public class Simulation {
     private double calculateResistance(int color) throws NonexistentSquare{
         int profundidad = 100;
         
-        /* Crea una lista para contener los caminos que deben caducar en la
+        /* Creates a list to contain the paths that should expire in the
          * primera iteracin de la bsqueda */
         ArrayList expireOriginal = board.getExpireList();
         
-        // Una serie de estructuras para implantar la caducidad de caminos:
+        // A series of structures to implement path expiration:
         ArrayList Caducar = new ArrayList(); // Paths que caducarn en una iteracin
-        renew = new ArrayList(); // Paths que han envejecido y que deben ser restaurados al terminar
+        renew = new ArrayList(); // Paths that have aged and must be restored upon completion
         ArrayList SiguientesCaducar = new ArrayList();  // Squares que caducarn la prxima iteracin
         
         Caducar = (ArrayList) expireOriginal.clone();  // Copiar en Caducar los caminos que caducarn en la segunda iteracin
@@ -289,7 +289,7 @@ public class Simulation {
         int g2;
         int g;
         
-        // Referencias temporales a celdas
+        // Temporary references to cells
         Cell cg = null;
         Cell cg1 = null;
         Cell cg2 = null;
@@ -313,9 +313,9 @@ public class Simulation {
                                     if((!(cg.getColor() == color)) || (cg2.isEmpty())){
                                         Iterator ic1 = null, ic2 = null;
 
-                                        /* Obtiene un iterador para el conjunto de caminos entre dos casillas. Los caminos
+                                        /* Gets an iterator for the set of paths between two squares. The paths
                                          * slo estn representados en un sentido, por lo que se comprueba tambin la combinacin
-                                         * inversa de casillas.
+                                         * inverse of squares is also checked.
                                          */
                                         Route r1 = SubC.getRoute(cg, cg1);
                                         if(r1 == null) r1 = SubC.getRoute(cg1, cg);
@@ -327,9 +327,9 @@ public class Simulation {
                                             ic1 = r1.getIterator();
                                             ic2 = r2.getIterator();
 
-                                            /* El siguiente bloque asegura que se recorren todas las posibles combinaciones
-                                             * de caminos de g - g1 y g - g2. El while anidado asegura que se estudian
-                                             * todos los casos. */                                     
+                                            /* The following block ensures that all possible combinations
+                                             * of paths from g - g1 and g - g2 are traversed. The nested while ensures that
+                                             * all cases are studied. */                                     
                                             while(ic1.hasNext()){
                                                 Path c1 = (Path) ic1.next();
                                                 while(ic2.hasNext()){
@@ -339,9 +339,9 @@ public class Simulation {
                                                             SiguientesCaducar.add(c1);
                                                             SiguientesCaducar.add(c2);
                                                             
-                                                            // Aplicar la regla AND estudiando el color de la casilla objetivo:
+                                                            // Apply the AND rule by studying the color of the target square:
                                                             if(cg.getColor() == color){
-                                                                if(SubC.getRoute(cg1, cg2) == null){ // Si no hay ruta
+                                                                if(SubC.getRoute(cg1, cg2) == null){ // If there is no route
                                                                     SubC.newConnection(cg1, cg2);
                                                                     NuevasConnections = true;
                                                                 }
@@ -358,7 +358,7 @@ public class Simulation {
                                                                 }
                                                             }
                                                             else{
-                                                                // No debe insertarse una SCV si ya existe una CV
+                                                                // A SCV should not be inserted if a VC already exists
                                                                 if(!SubC.hasConnectionEx(cg1, cg2)){
                                                                     Path sc = c1.union(c2, cg);
                                                                     
@@ -388,7 +388,7 @@ public class Simulation {
             }
             
             /* Marca como antiguos los caminos utilizados en la anterior iteracin
-             * y prepara los utilizados en la actual para caducar en la siguiente */
+             * and prepares those used in the current one to expire in the next */
             Iterator cad = Caducar.iterator();
             while(cad.hasNext()){
                 Path mod = (Path)cad.next();
@@ -400,7 +400,7 @@ public class Simulation {
             SiguientesCaducar.clear();
         }
         
-        ArrayList Visitados = new ArrayList();      // Crea una lista para los nodos visitados
+        ArrayList Visitados = new ArrayList();      // Creates a list for visited nodes
 
         char superior;
         char tierra;
@@ -414,8 +414,8 @@ public class Simulation {
             tierra = 'O'; 
         }
 
-        double M[][];   // Una matriz de conductancias temporal
-        double N[][];   // Matrix de conductancias definitiva
+        double M[][];   // A temporary conductance matrix
+        double N[][];   // Final conductance matrix
         double B[];     // La matriz column de trminos independientes de la ecuacin
         int conectado = -1;
 
@@ -423,13 +423,13 @@ public class Simulation {
         N = new double [NumeroNodos-1][NumeroNodos-1];
         B = new double [NumeroNodos-1];
         
-        int Intensidad = 1; // Intensidad transmitida por la fuente de corriente
-        int n = 0;          // êndice en G de elemento actual
-        int quitar = -1;    // êndice del nodo que se considera tierra    
+        int Intensidad = 1; // Intensity transmitted by the current source
+        int n = 0;          // Index in G of current element
+        int quitar = -1;    // Index of the node considered ground    
                     
         /* Recorre los elementos de G agregando la conductancia a la matriz segn
          * exista o no conexin. Anota el ndice del nodo conectado a tierra para eliminarlo
-         * y escribe la intensidad en el nodo conectado a la fuente. */
+         * and writes the intensity in the node connected to the source. */
         for(int i=0; i<NumeroNodos; i++){
             Cell c1 = ArrayG[i];
 
@@ -437,16 +437,16 @@ public class Simulation {
                 if(((Border)c1).getName() == tierra)
                     quitar = n;
                 else if(((Border)c1).getName() == superior){
-                    B[n] = Intensidad; // Si es el nodo conectado a la fuente, marcar un 1 en la matriz de intensidades   
+                    B[n] = Intensidad; // If it is the node connected to the source, mark a 1 in the intensity matrix   
                     conectado = n;
                 }
             }
 
-            /* Marca el nodo actual como visitado para no volver. Esto se puede
+            /* Marks the current node as visited to not return. This can
              * hacer porque la matriz es simtrica: */
             Visitados.add(c1);
             
-            Iterator it2 = G[color].iterator(); // Obtiene un iterador de los nodos
+            Iterator it2 = G[color].iterator(); // Gets an iterator of the nodes
             int m = 0;  // êndice en G del elemento actual
             while(it2.hasNext()){
                 Cell c2 = (Cell) it2.next();
@@ -463,10 +463,10 @@ public class Simulation {
             n++;
         }
         
-        /* Recorre la matriz M y copia sus elementos en N, suprimiendo
-         * la row y la column del nodo tierra y escribiendo los datos adecuados
-         * en la diagonal de la matriz. */
-        double ac; // Acumulador de la suma de las conductancias de cada row
+        /* Traverses matrix M and copies its elements to N, suppressing
+         * the row and column of the ground node and writing the appropriate data
+         * in the diagonal of the matrix. */
+        double ac; // Accumulator of the sum of conductances of each row
         int a = 0;
         int i = 0;
         while(i < NumeroNodos){
@@ -499,7 +499,7 @@ public class Simulation {
     
     /** Funcin recursiva que aplica la regla OR sobre una ruta creada aplicando
      *  la regla AND. La longitud de las rutas que se le pasan est limitada por K
-     *  para impedir que se disparen las llamadas. */
+     *  to prevent the calls from exploding. */
     private boolean AplicarReglaOR(Connections c, Cell g1, Cell g2, Route sc, Path u, Path i){
         if(sc.getLength() > K) return false;
         
@@ -538,10 +538,10 @@ public class Simulation {
         return false;
     }
    
-    /** Recorre el tablero y muestra las parejas de casillas y bordes entre los que hay 
+    /** Traverses the board and shows the pairs of squares and borders between which there is 
      *  una conexin establecida.
      *  @param  mostrar Permite configurar la lista: 1 = slo CV, 2 = slo SCV, 3 = slo connections.
-     *  @return Devuelve la media de conexiones por extremo (float) */ 
+     *  @return Returns the average connections per endpoint (float) */ 
    public float MostrarConnectionsEx(int color, int mostrar){
         Connections ob = null;
         Iterator it1 = G[color].iterator();
@@ -577,7 +577,7 @@ public class Simulation {
         return ((float) (total / numero));
     }
     
-    /** Recorre el tablero y muestra las parejas de casillas y bordes entre los que hay 
+    /** Traverses the board and shows the pairs of squares and borders between which there is 
      *  una conexin establecida.
      *  @param mostrar Permite configurar la lista: 1 = slo CV, 2 = slo SCV, 3 = slo connections. */ 
     public void MostrarConnectionsMinimas(int color, int mostrar){
@@ -617,7 +617,7 @@ public class Simulation {
         return board;
     }
     
-    /** Toma los caminos marcados como viejos y los renueva
+    /** Takes the paths marked as old and renews them
      *  para prepararlos para la siguiente iteracin */
     private void RestauraPaths(){
         Iterator ren = renew.iterator();

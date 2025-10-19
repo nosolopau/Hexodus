@@ -1,7 +1,7 @@
 /*
  * Board.java
  *
- * Creado el 23 de abril de 2007 a las 16:01
+ * Created on April 23, 2007 at 16:01
  *
  * Copyright (C) 2006 - 2008 Pablo Torrecilla. GNU General Public License
  */
@@ -19,23 +19,23 @@ import java.util.*;
 
 public class Board {
     private int dimension;
-    private Square squares[][];     // Una matriz de celdas
-    private Connections connections;   // Lista de conexiones virtuales del tablero
+    private Square squares[][];     // A matrix of cells
+    private Connections connections;   // List of virtual connections on the board
     private Border north, south, east, west;
-    private ArrayList expireOriginal;  // Caminos que caducan en la primera iteracion
+    private ArrayList expireOriginal;  // Paths that expire in the first iteration
     Cell [] all;
     
-    /** Crea una nueva instancia de Board */
+    /** Creates a new instance of Board */
     public Board(int dim) {
         expireOriginal = new ArrayList();
         dimension = dim;
         
         all = new Cell [dimension * dimension];
         
-        squares = new Square [dimension][dimension];   // Matriz que representa el tablero
-        connections = new Connections(dim);  // Lista con las conexiones virtuales del tablero
+        squares = new Square [dimension][dimension];   // Matrix representing the board
+        connections = new Connections(dim);  // List with the virtual connections on the board
 
-        // Crea las casillas del tablero:
+        // Creates the board squares:
         for(int i = 0; i < dimension; i++){
             for(int j = 0; j < dimension; j++){
                 squares[i][j] = new Square(i, j, i * dimension + j);
@@ -43,20 +43,20 @@ public class Board {
             }
         }
 
-        // Crea los cuatro bordes de celda
+        // Creates the four cell borders
         north = new Border(dim*dim+0, 'N');
         south = new Border(dim*dim+1, 'S');
         east = new Border(dim*dim+2, 'E');
         west = new Border(dim*dim+3, 'W');
         
-        /* Inicializa la list connections.
+        /* Initializes the connections list.
          * Los datos de inicializacin son siempre los mismos, por lo que en algunos casos
          * concretos se utilizan tablas estticas agrupadas por dimensinorth. Si no
          * encuentra la tabla de la dimensin en cuestin, el sistema ejecuta el 
-         * algoritmo para iniciar la list: 
-         * Toma una casilla y crea una CV para cada vecina que encuentra siempre
+         * algorithm to initialize the list: 
+         * Takes a square and creates a VC for each neighbor it finds as long as
          * que cumpla que sean vecinas y que no estn ya conectadas en el mismo 
-         * sentido west en el inverso. Enlaza las casillas cargando las listas de
+         * direction or in reverse. Links the squares by loading the neighbor lists
          * vecinas para cada celda, basndose en su posicin en el tablero. */
         if(dimension == 3){
             boolean [][] map = {{false, true, false, true, true, false, false, false, false}, 
@@ -215,9 +215,9 @@ public class Board {
                 }
             }
             
-/*          Mostrar los datos de conexiones listos para tabularse
+/*          Show the connection data ready to be tabulated
  *          Esta seccin no est documentada y sirve para aadir tablas estticas
- *          para dimensiones mayores y mejorar la eficiencia del sistema. Para que
+ *          for larger dimensions and improve system efficiency. For it to
  *          funcione hay que descomentar map2[a][b] = true en la seccin anterior.
  *
             System.out.println("---");
@@ -235,8 +235,8 @@ public class Board {
         }
                     
                
-        /* Inserta caminos y establece vecinas entre las casillas y los bordes
-         * en contacto: */
+        /* Inserts paths and establishes neighbors between the squares and the borders
+         * in contact: */
         for(int i = 0; i < dim; i++){
             connections.insertDirectPath(north, squares[0][i]);
             connections.insertDirectPath(south, squares[dim-1][i]);
@@ -272,8 +272,8 @@ public class Board {
         return dimension;
     }
     
-    /** Devuelve una list con las casillas libres del tablero
-     *  @return Lista de casillas libres */
+    /** Returns a list with the free squares on the board
+     *  @return List of free squares */
     public ArrayList<Square> getCellsLibres(){
         ArrayList<Square> lis = new ArrayList<Square>();
         
@@ -284,10 +284,10 @@ public class Board {
         return lis;
     }
     
-    /** Devuelve la list G asociada al tablero, conteniendo las casillas del color
+    /** Returns the list G associated with the board, containing the squares of the color
      *  que se pase por argumento west que estn libres
-     *  @param color Identificador del jugador del que se desea obtener G
-     *  @return Conjunto G como ArrayList */ 
+     *  @param color Identifier of the player for which G is to be obtained
+     *  @return Set G as ArrayList */ 
     public ArrayList<Cell> generateG(int color){
         ArrayList<Cell> G = new ArrayList<Cell>();
         if(color == 1){
@@ -312,33 +312,33 @@ public class Board {
         return G;
     }
     
-    /** Devuelve la casilla situada en la row y column que se pasen como argumento
-     *  @param row Fila de la casilla
-     *  @param column Columna de la casilla
-     *  @return Una referencia a la casilla indicada por esa row y esa column */
+    /** Returns the square located at the row and column passed as argument
+     *  @param row Square row
+     *  @param column Square column
+     *  @return A reference to the square indicated by that row and that column */
     public Square get(int row, int column){
         return squares[row][column];
     }
     
     /** Determina si dos celdas son vecinas atendiendo a la posicin en el tablero
-     *  @param a Primera casilla
-     *  @param b Segunda casilla
-     *  @return Verdadero si son vecinas, falso en caso contrario
-     *  @throws NonexistentSquare  Si la casilla objetivo esta fuera del rango del tablero */   
+     *  @param a First square
+     *  @param b Second square
+     *  @return True if they are neighbors, false otherwise
+     *  @throws NonexistentSquare  If the target square is outside the board range */   
     private boolean areNeighbors(Cell a, Cell b) throws NonexistentSquare{
         if((a instanceof Square) && (b instanceof Square))
             return areNeighbors(((Square)a).getRow(), ((Square)a).getColumn(), ((Square)b).getRow(), ((Square)b).getColumn());
         return false;
     }
     
-    /** Determina si dos celdas cuyas coordenadas se pase son vecinas atendiendo
+    /** Determines if two cells whose coordinates are passed are neighbors based on
      *  a la posicin en el tablero.
-     *  @param row1 Fila de la primera casilla
-     *  @param col1 Columna de la primera casilla
-     *  @param row2 Fila de la segunda casilla
-     *  @param col2 Columna de la segunda casilla
-     *  @return Verdadero si son vecinas, falso en caso contrario
-     *  @throws NonexistentSquare  Si la casilla objetivo esta fuera del rango del tablero */   
+     *  @param row1 Row of the first square
+     *  @param col1 Column of the first square
+     *  @param row2 Row of the second square
+     *  @param col2 Column of the second square
+     *  @return True if they are neighbors, false otherwise
+     *  @throws NonexistentSquare  If the target square is outside the board range */   
     private boolean areNeighbors(int row1, int col1, int row2, int col2) throws NonexistentSquare{
         if((row1 >= dimension) || (col1 >= dimension) || (col1 < 0) || (row1 < 0) || (row2 >= dimension) || (col2 >= dimension) || (col2 < 0) || (row2 < 0))
             throw new NonexistentSquare();
