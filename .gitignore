@@ -24,5 +24,11 @@ Thumbs.db
 *.swo
 *~
 
+# Claude Code settings
+.claude/
+
+# Translation scripts (temporary)
+translate*.py
+
 # Ant-specific
 .ant-targets-build.xml
