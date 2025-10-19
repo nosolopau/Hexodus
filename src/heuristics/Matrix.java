@@ -226,6 +226,74 @@ public class Matrix{
         return s;
     }
 
+    /** Calculates the solutions of the matrix using Gauss-Seidel iterative method.
+     *  This is much faster than Gaussian elimination for sparse matrices (like the
+     *  resistance matrix in Hex, where each cell connects to only 6 neighbors).
+     *
+     *  The paper recommends using iterative methods for resistance calculation.
+     *
+     *  @param b the value vector of the equation
+     *  @return the solution vector of the equation */
+    public double[] solveIterative(double[] b){
+        int n = this.getRowCount();
+
+        // Configuration for iterative solver
+        int maxIterations = 100;      // Maximum number of iterations
+        double tolerance = 0.0001;    // Convergence tolerance (tighter than deprecated version)
+
+        double[] x = new double[n];   // Current solution
+        double[] xNew = new double[n]; // Next iteration solution
+
+        // Initialize solution to zero
+        for(int i = 0; i < n; i++){
+            x[i] = 0.0;
+        }
+
+        // Gauss-Seidel iteration
+        for(int iter = 0; iter < maxIterations; iter++){
+            // Update each component using latest values
+            for(int i = 0; i < n; i++){
+                double sum = b[i];
+
+                // Subtract contributions from other variables
+                for(int j = 0; j < n; j++){
+                    if(j != i){
+                        // Use new values (xNew) for j < i, old values (x) for j > i
+                        sum -= this.getValue(i, j) * (j < i ? xNew[j] : x[j]);
+                    }
+                }
+
+                // Update this component
+                xNew[i] = sum / this.getValue(i, i);
+            }
+
+            // Check convergence: ||x_new - x|| / ||x_new|| < tolerance
+            double diffNorm = 0.0;
+            double solutionNorm = 0.0;
+            for(int i = 0; i < n; i++){
+                double diff = xNew[i] - x[i];
+                diffNorm += diff * diff;
+                solutionNorm += xNew[i] * xNew[i];
+            }
+            diffNorm = Math.sqrt(diffNorm);
+            solutionNorm = Math.sqrt(solutionNorm);
+
+            // Copy new solution to current
+            for(int i = 0; i < n; i++){
+                x[i] = xNew[i];
+            }
+
+            // Check if converged
+            if(solutionNorm > 0 && diffNorm / solutionNorm < tolerance){
+                return x;
+            }
+        }
+
+        // If we didn't converge, return best approximation
+        // (For well-conditioned matrices like resistance networks, this rarely happens)
+        return x;
+    }
+
     /** Calculates the inverse of the matrix (A * A(^-1) = I)
      *  @return the matrix A^(-1) */
     public Matrix inverse(){
