@@ -35,7 +35,7 @@ import javax.swing.JPanel;
 import javax.swing.border.*;
 import game.*;
 
-/** Represents the application control module and the main window
+/** Representa el mdulo de control de la aplicacin y la ventana principal
  *  @author Pau
  *  @version 1.0
  */
@@ -45,17 +45,17 @@ public class Main{
     public Main(){
     }
     
-    /** Starts the program execution
-     *  @param args Command line arguments */
+    /** Comienza la ejecucin del programa
+     *  @param args Argumentos de la lnea de comandos */
     public static void main(String[] args){        
         GameWindow juego = new GameWindow(6, 0, 1, true);
 
-        WindowCloseHandler window = new WindowCloseHandler();
-        juego.addWindowListener(window);
+        WindowCloseHandler ventana = new WindowCloseHandler();
+        juego.addWindowListener(ventana);
     }
 }
 
-/** Options dialog box for creating a new game */
+/** Cuadro de dilogo de opciones para crear un nuevo juego */
 class OptionsDialog extends JDialog{
     private JRadioButton v1, v2, h1, h2;    // References to the controls
     private JComboBox selDimension;
@@ -124,7 +124,7 @@ class OptionsDialog extends JDialog{
         horizontal.add(h2);
     }
     
-    /** Class to listen for the accept button press */
+    /** Clase para escuchar la pulsacin del botn aceptar */
     class AcceptHandler implements ActionListener{
         public void actionPerformed(ActionEvent e){
             int v, h;
@@ -151,7 +151,7 @@ class OptionsDialog extends JDialog{
     }
 }
 
-/** Class to represent the About dialog box */
+/** Clase para representar el cuadro de dilogo Acerca de */
 class AboutDialog extends JDialog{
     public AboutDialog(GameWindow principal){
         super(principal, "About Hexodus", true);
@@ -182,7 +182,7 @@ class AboutDialog extends JDialog{
         panel.add(Ok);
     }
     
-    /** Listens for the "close" button event to close the window */
+    /** Escucha el evento del botn "cerrar" para cerrar la ventana */
     class AcceptHandler implements ActionListener{
         public void actionPerformed(ActionEvent e){    
             dispose();
@@ -191,7 +191,7 @@ class AboutDialog extends JDialog{
 }
 
 /** Class that represents a match and the window used to provide
- *  support for the new game, maintaining interaction with the user */
+ *  soporte al nuevo juego, manteniendo la interaccin con el usuario */
 class GameWindow extends JFrame{
     private GameWindow yo;
     private JMenu[] menus;
@@ -212,10 +212,10 @@ class GameWindow extends JFrame{
     private int Dimension;
     private int f;
     private int c;
-    private boolean firstMove;
+    private boolean Primera;
     
     /** Creates a new game window
-     *  @param dim      Board dimension of the new game
+     *  @param dim      Dimensin dthe board del nuevo juego
      *  @param tipoV    Type of the vertical player
      *  @param tipoH    Type of the horizontal player
      *  @param swap     True if the swap rule is enabled, false otherwise */
@@ -228,7 +228,7 @@ class GameWindow extends JFrame{
     }
     
     /** Creates a new game
-     *  @param dim      Board dimension of the new game
+     *  @param dim      Dimensin dthe board del nuevo juego
      *  @param tipoV    Type of the vertical player
      *  @param tipoH    Type of the horizontal player
      *  @param swap     True if the swap rule is enabled, false otherwise */
@@ -277,7 +277,7 @@ class GameWindow extends JFrame{
         }
         setSize(width, height);
         
-        firstMove = true;         
+        Primera = true;         
         board = new BoardPanel(Dimension, width);
         
         board.setLayout(null);
@@ -363,21 +363,21 @@ class GameWindow extends JFrame{
         else if(turn.getType() == 1){ // If the starting player is the computer
             changeStatus(0);
             if(swap){
-                generateSwapMove(turn);
+                GeneraMoveSwap(turn);
             }
-            else{generateMove(turn);
+            else{GeneraMove(turn);
             changeStatus(-1);
             }
         }
     }
     
     /** Disables controls that should be blocked at certain times... */
-    public void disable(){
+    public void Inhabilitar(){
         menus[1].setEnabled(false);
     }
     
     /** And enables them again */
-    public void enable(){
+    public void Habilitar(){
         menus[1].setEnabled(true);
     }
     
@@ -388,11 +388,11 @@ class GameWindow extends JFrame{
                 
         switch(id){
             case 0:
-                disable();
-                status = "Hexodus is thinking...";
+                Inhabilitar();
+                status = "Hexodus est pensando...";
                 break;
             default:
-                enable();
+                Habilitar();
                 status = "";
         }
         text.setText(status);
@@ -415,7 +415,7 @@ class GameWindow extends JFrame{
     /** Requests the match object to suggest a move and displays it on
      *  the board
      *  @param t player for whom the move is suggested */
-    public void suggestMove(Player t){
+    public void SugiereMove(Player t){
         changeStatus(0);
         suggested = p.generateMove(t);
 
@@ -423,20 +423,20 @@ class GameWindow extends JFrame{
         changeStatus(-1);
     }
     
-    /** Removes the last suggested move from the board */
-    public void removeSuggestedMove(){
+    /** Borra dthe board el ltimo movimiento suggested */
+    public void EliminaMoveSugerido(){
         if(suggested != null)
             b[suggested[1]][suggested[0]].setIcon(null);
         suggested = null;
     }
     
-    /** Generates a move if the swap rule is enabled
-     *  @param turn Player in possession of the turn */
-    public void generateSwapMove(Player turn){
-        int [] move = new int[2];
+    /** Genera un movimiento si la regla de intercambio est activada
+     *  @param turn Player en posesin del turn */
+    public void GeneraMoveSwap(Player turn){
+        int [] jugada = new int[2];
         changeStatus(0);
-        move = p.generateMove(turn);
-        b[move[1]][move[0]].setIcon(ic_turn);
+        jugada = p.generateMove(turn);
+        b[jugada[1]][jugada[0]].setIcon(ic_turn);
         changeStatus(-1);
 
         swap = new JButton();
@@ -445,28 +445,28 @@ class GameWindow extends JFrame{
         swap.addActionListener(new SwapButtonHandler());
         statusBar.add(swap);
 
-        f = move[0];
-        c = move[1];
-        firstMove = false;
-        disable();
+        f = jugada[0];
+        c = jugada[1];
+        Primera = false;
+        Inhabilitar();
         Graphics gf = getGraphics();
         if (gf != null) paintComponents(gf);
         else repaint();
     }
     
     /** Requests the match object to generate a move
-     *  @param turn Player in possession of the turn
+     *  @param turn Player en posesin del turn
      *  @return Player who wins the match with this move, if applicable */
-    public Player generateMove(Player turn){
+    public Player GeneraMove(Player turn){
         Player winner = null;
-        int [] move = new int[2];
+        int [] jugada = new int[2];
         
         changeStatus(0);
-        move = p.generateMove(turn);
-        b[move[1]][move[0]].setIcon(ic_turn);
-        g[move[1]][move[0]].setAllowed(false);
+        jugada = p.generateMove(turn);
+        b[jugada[1]][jugada[0]].setIcon(ic_turn);
+        g[jugada[1]][jugada[0]].SeleccionarPermitido(false);
         try {
-            winner = p.newMove(move[0], move[1], turn);
+            winner = p.newMove(jugada[0], jugada[1], turn);
         } catch (OccupiedSquare ex) {
             ex.printStackTrace();
         } catch (NonexistentSquare ex) {
@@ -487,7 +487,7 @@ class GameWindow extends JFrame{
     }
     
     /** Returns the next player to have the turn */
-    public Player ObtenernextTurno(){
+    public Player ObtenerSiguienteTurno(){
         if(turn == uno) return dos;
         else return uno;
     }
@@ -500,7 +500,7 @@ class GameWindow extends JFrame{
                 b[i][j].removeActionListener(g[i][j]);
             }
         }
-        disable();
+        Inhabilitar();
         text.setText("Winner: " + winner.getName());
     }
     
@@ -509,7 +509,7 @@ class GameWindow extends JFrame{
     public void updateSwapHandlers(){
         for(int i = 0; i < Dimension; i++){
             for(int j = 0; j < Dimension; j++){
-                boolean bloq = g[i][j].getAllowed();
+                boolean bloq = g[i][j].ObtenerPermitido();
                 b[i][j].removeActionListener(g[i][j]);
                 g[i][j] = new CellHandlerNormal(i, j, bloq);
                 b[i][j].addActionListener(g[i][j]);
@@ -517,9 +517,9 @@ class GameWindow extends JFrame{
         }
     }
     
-    /** Executes demonstration mode */
+    /** Ejecuta el modo de demostracin */
     public void demo(){
-        disable();
+        Inhabilitar();
         
         for(int i = 0; i < Dimension; i++){
             for(int j = 0; j < Dimension; j++){
@@ -527,9 +527,9 @@ class GameWindow extends JFrame{
             }
         }       
         Player winner = null;
-        int [] move = new int[2];
+        int [] jugada = new int[2];
         do{
-            winner = generateMove(turn);
+            winner = GeneraMove(turn);
 
             Graphics gf = getGraphics();
             if (gf != null) paintComponents(gf);
@@ -541,11 +541,11 @@ class GameWindow extends JFrame{
             }
         } while(winner == null);
         
-        disable();
+        Inhabilitar();
         text.setText("Winner: " + winner.getName());
     }
     
-    /** Subclass to represent the panel with the board */
+    /** Subclase para representar el panel con the board */
     class BoardPanel extends JPanel{ 
         Image backgroundImage = null;
         int width;
@@ -575,7 +575,7 @@ class GameWindow extends JFrame{
                 int imwidth = backgroundImage.getWidth(null);
                 int imheight = backgroundImage.getHeight(null);
                 
-                // displays the centered board image.
+                // muestra la imagen dthe board centrada.
                 if((imwidth > 0) && (imheight > 0)){                
                     g.drawImage(backgroundImage, width / 2 - imwidth / 2, 50, null);
                 }
@@ -583,30 +583,30 @@ class GameWindow extends JFrame{
         }
     }
     
-    /** Subclass to manage the application menu */
+    /** Subclase para gestionar el men de la aplicacin */
     class MenuHandler implements ActionListener{
-        private int index;
-        private int parent;
+        private int Indice;
+        private int Padre;
         
         public MenuHandler(int padre, int indice){
-            index = indice;
-            parent = padre;
+            Indice = indice;
+            Padre = padre;
         }
         
         public void actionPerformed(ActionEvent e){
-            switch(parent){
+            switch(Padre){
             case 0:
-                switch(index){
+                switch(Indice){
                 case 0:
-                    OptionsDialog dialog = new OptionsDialog(yo);
-                    dialog.setVisible(true);
+                    OptionsDialog nuevo = new OptionsDialog(yo);
+                    nuevo.setVisible(true);
                     break;
                 }
                 break;
             case 1:
-                switch(index){
+                switch(Indice){
                 case 0:
-                    suggestMove(turn);
+                    SugiereMove(turn);
                     break;
                 case 1:
                     try {
@@ -625,7 +625,7 @@ class GameWindow extends JFrame{
                 }
                 break;
             case 2:
-                switch(index){
+                switch(Indice){
                 case 0:
                     AboutDialog acerca = new AboutDialog(yo);
                     acerca.setVisible(true);
@@ -638,10 +638,10 @@ class GameWindow extends JFrame{
     }
     
     /** Subclass to handle the different events related to
-     *  squares of the game board.
+     *  casillas dthe board de juego.
      *  It is abstract because the square handlers have to control
-     *  the application of the swap rule in the first move if that option
-     *  is enabled. To save checks, polymorphism is used and
+     *  la aplicacin de la regla intercambio en la primera jugada si esa opcin
+     *  est habilitada. Para ahorrar comprobaciones, se usa el polimorfismo y se
      *  one handler is used in the first move and another for the rest of the
      *  match. */
     abstract class CellHandler implements ActionListener{
@@ -657,16 +657,16 @@ class GameWindow extends JFrame{
         
         abstract public void actionPerformed(ActionEvent e);
         
-        public boolean getAllowed(){
+        public boolean ObtenerPermitido(){
             return allowed;
         }
         
-        public void setAllowed(boolean permitido){
+        public void SeleccionarPermitido(boolean permitido){
             allowed = permitido;
         }
     }
     
-    /** Normal handler for the complete game after the first move */
+    /** Manejador normal para el juego completo despus de la primera jugada */
     class CellHandlerNormal extends CellHandler{ 
         public CellHandlerNormal(int column, int row){ 
             super(column, row);
@@ -680,10 +680,10 @@ class GameWindow extends JFrame{
         public void actionPerformed(ActionEvent e){
             Player h;
             Player m;
-            int [] move = new int[2];
+            int [] jugada = new int[2];
             
             if(allowed){
-                removeSuggestedMove();
+                EliminaMoveSugerido();
                 allowed = false;
                 b[column][row].setIcon(ic_turn);
 
@@ -697,7 +697,7 @@ class GameWindow extends JFrame{
                     if(h == null){
                         changeTurn();    
                         if(turn.isComputer()){
-                            m = generateMove(turn);
+                            m = GeneraMove(turn);
                             if(m != null) finish(m);
                         }
                     } 
@@ -722,22 +722,22 @@ class GameWindow extends JFrame{
         public void actionPerformed(ActionEvent e){
             Player h;
             Player m;
-            int [] move = new int[2];
+            int [] jugada = new int[2];
             
             if(allowed){
                 allowed = false;
-                removeSuggestedMove();
-                if(firstMove){    // It is the first time this handler is used
-                    disable();
+                EliminaMoveSugerido();
+                if(Primera){    // It is the first time this handler is used
+                    Inhabilitar();
                     b[column][row].setIcon(ic_turn);
                     allowed = false;
 
                     f = row;
                     c = column;
-                    firstMove = false;
+                    Primera = false;
                     
                     // If the opponent is the computer, ask if it swaps
-                    if(ObtenernextTurno().isComputer()) {  
+                    if(ObtenerSiguienteTurno().isComputer()) {  
                         if(p.offerSwap(f, c)){ // The computer accepts the swap
                             Graphics gf = getGraphics();
                             if (gf != null) paintComponents(gf);
@@ -770,14 +770,14 @@ class GameWindow extends JFrame{
                                 ex.printStackTrace();
                             }
 
-                            generateMove(turn);
+                            GeneraMove(turn);
                             
                             Graphics gf = getGraphics();
                             if (gf != null) paintComponents(gf);
                             else repaint();                           
                         }
                         updateSwapHandlers();
-                    }   // If the opponent is a human, show the button
+                    }   // Si el contrario es un humano, mostrar el botn
                     else{
                         swap = new JButton();
                         swap.setContentAreaFilled(false);
@@ -805,15 +805,15 @@ class GameWindow extends JFrame{
                     if (gf != null) paintComponents(gf);
                     else repaint();
 
-                    if(turn.isComputer()) generateMove(turn);
+                    if(turn.isComputer()) GeneraMove(turn);
                     updateSwapHandlers();
-                    enable();
+                    Habilitar();
                 }        
             }
         }
     }
     
-    /** Controls the swap button press when this
+    /** Controla la pulsacin del botn de intercambio cuando se ofrece esta
      *  possibility is offered to the user */
     class SwapButtonHandler implements ActionListener{
         public void actionPerformed(ActionEvent e){
@@ -831,8 +831,8 @@ class GameWindow extends JFrame{
 
             updateSwapHandlers();
             swap.setVisible(false);
-            if(turn.isComputer()) generateMove(turn);
-            enable();
+            if(turn.isComputer()) GeneraMove(turn);
+            Habilitar();
         }
     }       
 }

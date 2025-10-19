@@ -12,8 +12,8 @@ import java.util.*;
 class NonexistentSquare extends Exception{};
 
 /**
- * Represents the simulation of a move and allows undoing the changes of the
- * move. It is used to calculate the numerical value according to the corresponding heuristic
+ * Representa la simulacin de una jugada y permite deshacer los cambios de la
+ * misma. Se utiliza para calcular el valor numrico de acuerdo con la heurstica correspondiente
  * for the simulated move.
  *
  * @author Pau
@@ -29,12 +29,12 @@ public class Simulation {
     private Connections C[];        // List of virtual connections for each player
     private Connections SC[];       // List of virtual semi-connections for each player
     private Connections connections;
-    private boolean newsConnections;   // Stores whether C or SC were created in the previous iteration
+    private boolean NuevasConnections;   // Almacena si se crearon C o SC en la iteracin anterior
     private Square target;
     private Board board;
     
     /** Creates the objects common to all simulations. This constructor is
-     *  for internal use, and therefore has private scope */
+     *  para uso interno, y por tanto es de mbito privado */
     private Simulation(){
         K = 5;
         
@@ -46,9 +46,9 @@ public class Simulation {
 
     }
     
-    /** Creates a base simulation with an empty board for the dimension that
+    /** Crea una simulacin base con el tablero vaco para la dimensin que
      *  is received as argument.
-     *  @param dimension Game board dimension */
+     *  @param dimension Dimensin del tablero de juego */
     public Simulation(int dimension) {
         this();
         
@@ -62,19 +62,19 @@ public class Simulation {
     
     /** Creates a new instance of Simulation with a target cell
      *  that is passed as argument
-     *  @param base Parent simulation
+     *  @param base Simulacin padre
      *  @param cel Target Square
-     *  @param color Color of the player responsible for the simulation */
+     *  @param color Color del jugador responsable de la simulacin */
     public Simulation(Simulation base, Square cel, int color) {
         this(base, cel.getRow(), cel.getColumn(), color);
     }
     
     /** Creates a new instance of Simulation with a target cell
      *  identified by its row and column
-     *  @param base Parent simulation
+     *  @param base Simulacin padre
      *  @param row Row of the target square
      *  @param column Column of the target square
-     *  @param color Color of the player responsible for the simulation */
+     *  @param color Color del jugador responsable de la simulacin */
     public Simulation(Simulation base, int row, int column, int color) {
         this();
         
@@ -102,7 +102,7 @@ public class Simulation {
         Iterator <Cell> itv = target.getNeighborList().iterator();
         while(itv.hasNext()){
             vec = itv.next();
-            /* If a neighbor is the same color as the recin inserted it is necessary to
+            /* Si una vecina es del mismo color que la recin insertada hay que
              * remove the old cell (with its possible connections) and transfer
              * its neighbors to the new one. */
             ArrayList <Cell> remove2 = new ArrayList<Cell>();
@@ -156,7 +156,7 @@ public class Simulation {
         Iterator ita = add.iterator();
         while(ita.hasNext()){
             Cell newNeighbor = (Cell)ita.next();
-            if(target != newNeighbor){    // A cell cannot be neighbor of s misma
+            if(target != newNeighbor){    // Una celda no puede ser vecina de s misma
                 
                 target.addNeighbor(newNeighbor);
                 newNeighbor.addNeighbor(target);
@@ -166,13 +166,13 @@ public class Simulation {
         }
     }
     
-    /** Returns the target square that the simulation studies
-     *  @return Target square of the simulation */
+    /** Devuelve la casilla objetivo que estudia la simulacin
+     *  @return Target Square de la simulacin */
     public Square getTargetCell(){
         return target;
     }
     
-    /** Calculates the simulation value
+    /** Calcula el valor de la simulacin
      *  @return A double with the value of dividing the white resistance by
      *  the black resistance */
     public double calculateValue() {
@@ -193,7 +193,7 @@ public class Simulation {
         return r0/r1;
     }
     
-    /** Restores the data from la simulacin current basndose en el history of
+    /** Restaura los datos de la simulacin actual basndose en el historial de
      *  recorded changes */
     public void restore(){
         target.occupy(-1);
@@ -245,35 +245,35 @@ public class Simulation {
         }
     }
     
-    /** Returns the free squares of the board associated with the simulation
+    /** Devuelve las casillas libres del tablero asociado a la simulacin
      *  @return ArrayList of free squares */
     public ArrayList<Square> getFreeCells(){
         return board.getCellsLibres();
     }
     
     /** Adds a removed cell to the list to undo changes
-     *  @param m The HashMap to which the cell in question must be added
+     *  @param m El HashMap al que hay que agregar la celda en cuestin
      *  @param c Cell to be added
-     *  @param neighbors List of neighbors of the cell to be added */
-    private void addRemoved(HashMap m, Cell c, ArrayList neighbors){
-        m.put(c, neighbors);
+     *  @param vecinas List of neighbors of the cell to be added */
+    private void addRemoved(HashMap m, Cell c, ArrayList vecinas){
+        m.put(c, vecinas);
     }
     
-    /** Calculates the valid combinations between the elements of the set G, 
-     *  called g, g1 and g2. Keeps g fixed and varies g1 and g2 over it: */
+    /** Calcula las combinaciones vlidas entre los elementos del conjunto G, 
+     *  denominados g, g1 y g2. Mantiene fijo g y vara sobre l g1 y g2: */
     private double calculateResistance(int color) throws NonexistentSquare{
         int profundidad = 100;
         
         /* Creates a list to contain the paths that should expire in the
-         * first search iteration */
+         * primera iteracin de la bsqueda */
         ArrayList expireOriginal = board.getExpireList();
         
         // A series of structures to implement path expiration:
-        ArrayList Caducar = new ArrayList(); // Paths that will expire in an iteration
+        ArrayList Caducar = new ArrayList(); // Paths que caducarn en una iteracin
         renew = new ArrayList(); // Paths that have aged and must be restored upon completion
-        ArrayList nextsCaducar = new ArrayList();  // Squares that will expire next iteration
+        ArrayList SiguientesCaducar = new ArrayList();  // Squares que caducarn la prxima iteracin
         
-        Caducar = (ArrayList) expireOriginal.clone();  // Copy to Caducar the paths that will expire in the second iteration
+        Caducar = (ArrayList) expireOriginal.clone();  // Copiar en Caducar los caminos que caducarn en la segunda iteracin
 
         G[color] = board.generateG(color);
         int NumeroNodos = G[color].size();
@@ -294,12 +294,12 @@ public class Simulation {
         Cell cg1 = null;
         Cell cg2 = null;
         
-        // Variables for connection search
-        newsConnections = true;
+        // Variables para la bsqueda de conexiones
+        NuevasConnections = true;
         int iteraciones = 0;
 
-        while(newsConnections && (iteraciones < profundidad)){
-            newsConnections = false;
+        while(NuevasConnections && (iteraciones < profundidad)){
+            NuevasConnections = false;
             iteraciones++;
             for(g = 0; g < NumeroNodos; g++){
                 cg = ArrayG[g];
@@ -314,7 +314,7 @@ public class Simulation {
                                         Iterator ic1 = null, ic2 = null;
 
                                         /* Gets an iterator for the set of paths between two squares. The paths
-                                         * are only represented in one direction, so the combination
+                                         * slo estn representados en un sentido, por lo que se comprueba tambin la combinacin
                                          * inverse of squares is also checked.
                                          */
                                         Route r1 = SubC.getRoute(cg, cg1);
@@ -336,14 +336,14 @@ public class Simulation {
                                                     Path c2 = (Path) ic2.next();
                                                     if(c1.hasEmptyIntersection(c2) && !c2.contains(cg1) && !c1.contains(cg2)){
                                                         if(c1.isNew() || c2.isNew()){
-                                                            nextsCaducar.add(c1);
-                                                            nextsCaducar.add(c2);
+                                                            SiguientesCaducar.add(c1);
+                                                            SiguientesCaducar.add(c2);
                                                             
                                                             // Apply the AND rule by studying the color of the target square:
                                                             if(cg.getColor() == color){
                                                                 if(SubC.getRoute(cg1, cg2) == null){ // If there is no route
                                                                     SubC.newConnection(cg1, cg2);
-                                                                    newsConnections = true;
+                                                                    NuevasConnections = true;
                                                                 }
                                                                 Route r = SubC.getRoute(cg1, cg2);
                                                                 Path c = c1.union(c2);
@@ -364,7 +364,7 @@ public class Simulation {
                                                                     
                                                                     if(SubSC.getRoute(cg1, cg2) == null){
                                                                         SubSC.newConnection(cg1, cg2);
-                                                                        newsConnections = true;
+                                                                        NuevasConnections = true;
                                                                     }
                                                                     Route r = SubSC.getRoute(cg1, cg2);
 
@@ -387,7 +387,7 @@ public class Simulation {
                 }
             }
             
-            /* Marks as old the paths used in the previous iteration
+            /* Marca como antiguos los caminos utilizados en la anterior iteracin
              * and prepares those used in the current one to expire in the next */
             Iterator cad = Caducar.iterator();
             while(cad.hasNext()){
@@ -396,8 +396,8 @@ public class Simulation {
                 renew.add(mod);
             }
             Caducar.clear();
-            Caducar = (ArrayList) nextsCaducar.clone();
-            nextsCaducar.clear();
+            Caducar = (ArrayList) SiguientesCaducar.clone();
+            SiguientesCaducar.clear();
         }
         
         ArrayList Visitados = new ArrayList();      // Creates a list for visited nodes
@@ -416,7 +416,7 @@ public class Simulation {
 
         double M[][];   // A temporary conductance matrix
         double N[][];   // Final conductance matrix
-        double B[];     // The column matrix of independent terms of the equation
+        double B[];     // La matriz column de trminos independientes de la ecuacin
         int conectado = -1;
 
         M = new double [NumeroNodos][NumeroNodos];
@@ -427,8 +427,8 @@ public class Simulation {
         int n = 0;          // Index in G of current element
         int quitar = -1;    // Index of the node considered ground    
                     
-        /* Traverses the elements of G adding the conductance to the matrix according to
-         * whether connection exists. Notes the index of the ground-connected node to eliminate it
+        /* Recorre los elementos de G agregando la conductancia a la matriz segn
+         * exista o no conexin. Anota el ndice del nodo conectado a tierra para eliminarlo
          * and writes the intensity in the node connected to the source. */
         for(int i=0; i<NumeroNodos; i++){
             Cell c1 = ArrayG[i];
@@ -443,16 +443,16 @@ public class Simulation {
             }
 
             /* Marks the current node as visited to not return. This can
-             * be done because the matrix is symmetric: */
+             * hacer porque la matriz es simtrica: */
             Visitados.add(c1);
             
             Iterator it2 = G[color].iterator(); // Gets an iterator of the nodes
-            int m = 0;  // Index in G of current element
+            int m = 0;  // êndice en G del elemento actual
             while(it2.hasNext()){
                 Cell c2 = (Cell) it2.next();
                 if(!Visitados.contains(c2)){
-                    /* If the elements are connected, inserts into the matrix 
-                     * the conductance between them. If they are not, inserts 0 */
+                    /* Si los elementos estn conectados, inserta en la matriz 
+                     * la conductancia entre ellos. Si no lo estn, inserta 0 */
                     if(SubC.hasConnectionEx(c1, c2)){
                         M[n][m] = M[m][n] = -1 / (double) (c1.getResistance(color) + c2.getResistance(color));
                     }
@@ -497,8 +497,8 @@ public class Simulation {
         return c[conectado];
     }
     
-    /** Recursive function that applies the OR rule on a route created by applying
-     *  the AND rule. The length of the routes passed to it is limited by K
+    /** Funcin recursiva que aplica la regla OR sobre una ruta creada aplicando
+     *  la regla AND. La longitud de las rutas que se le pasan est limitada por K
      *  to prevent the calls from exploding. */
     private boolean AplicarReglaOR(Connections c, Cell g1, Cell g2, Route sc, Path u, Path i){
         if(sc.getLength() > K) return false;
@@ -515,7 +515,7 @@ public class Simulation {
             if(i.hasEmptyIntersection(sc1)){ 
                 if(c.getRoute(g1, g2) == null){
                     c.newConnection(g1, g2);
-                    newsConnections = true;
+                    NuevasConnections = true;
 
                 }
                 ruta = c.getRoute(g1,g2);
@@ -539,8 +539,8 @@ public class Simulation {
     }
    
     /** Traverses the board and shows the pairs of squares and borders between which there is 
-     *  an established connection.
-     *  @param  mostrar Allows configuring the list: 1 = only CV, 2 = only SCV, 3 = only connections.
+     *  una conexin establecida.
+     *  @param  mostrar Permite configurar la lista: 1 = slo CV, 2 = slo SCV, 3 = slo connections.
      *  @return Returns the average connections per endpoint (float) */ 
    public float MostrarConnectionsEx(int color, int mostrar){
         Connections ob = null;
@@ -578,8 +578,8 @@ public class Simulation {
     }
     
     /** Traverses the board and shows the pairs of squares and borders between which there is 
-     *  an established connection.
-     *  @param mostrar Allows configuring the list: 1 = only CV, 2 = only SCV, 3 = only connections. */ 
+     *  una conexin establecida.
+     *  @param mostrar Permite configurar la lista: 1 = slo CV, 2 = slo SCV, 3 = slo connections. */ 
     public void MostrarConnectionsMinimas(int color, int mostrar){
         Connections ob = null;
         Iterator it1 = G[color].iterator();
@@ -611,14 +611,14 @@ public class Simulation {
         }
     }
     
-    /** Returns the board associated with the simulation
-     *  @return The simulation board */
+    /** Devuelve el tablero asociado a la simulacin
+     *  @return El tablero de la simulacin */
     public Board getBoard(){
         return board;
     }
     
     /** Takes the paths marked as old and renews them
-     *  to prepare them for the next iteration */
+     *  para prepararlos para la siguiente iteracin */
     private void RestauraPaths(){
         Iterator ren = renew.iterator();
         while(ren.hasNext()){

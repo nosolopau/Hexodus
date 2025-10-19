@@ -11,7 +11,7 @@ import java.util.*;
 
 /**
  * Represents the virtual board that supports the heuristic, whose
- * caracterstica pueden variar para Representsr la lgica interna del juego.
+ * caracterstica pueden variar para representar la lgica interna del juego.
  *
  * @author Pau
  * @version 1.0
@@ -50,14 +50,14 @@ public class Board {
         west = new Border(dim*dim+3, 'W');
         
         /* Initializes the connections list.
-         * Los data from inicializacin son always the same, so in some cases
-         * specific ones use tablas estticas grouped by dimensinorth. If not
-         * find the table for the dimension in question, the system executes the
+         * Los datos de inicializacin son siempre los mismos, por lo que en algunos casos
+         * concretos se utilizan tablas estticas agrupadas por dimensinorth. Si no
+         * encuentra la tabla de la dimensin en cuestin, el sistema ejecuta el 
          * algorithm to initialize the list: 
          * Takes a square and creates a VC for each neighbor it finds as long as
          * they meet the condition of being neighbors and not already connected in the same 
          * direction or in reverse. Links the squares by loading the neighbor lists
-         * for each cell, based on their position on the board. */
+         * vecinas para cada celda, basndose en su posicin en el tablero. */
         if(dimension == 3){
             boolean [][] map = {{false, true, false, true, true, false, false, false, false}, 
                 {false, false, true, false, true, true, false, false, false}, 
@@ -254,13 +254,13 @@ public class Board {
         }
     }
     
-    /** Returns the list of paths that will expire in a first iteration
-     *  @return List of paths that should expire in the first iteration */
+    /** Devuelve la list de caminos que van a caducar en una primera iteracin
+     *  @return Lista de caminos que deben caducar en la primera iteracin */
     public ArrayList getExpireList(){
         return expireOriginal;
     }
     
-    /** Returns the set of basic connections T
+    /** Devuelve el conjunto de conexiones bsicas T
      *  @return Set T of basic board connections */
     public Connections getConnections(){
         return connections;
@@ -320,7 +320,7 @@ public class Board {
         return squares[row][column];
     }
     
-    /** Determines if two cells are neighbors based on their position on the board
+    /** Determina si dos celdas son vecinas atendiendo a la posicin en el tablero
      *  @param a First square
      *  @param b Second square
      *  @return True if they are neighbors, false otherwise
