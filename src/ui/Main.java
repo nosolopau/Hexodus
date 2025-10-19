@@ -37,14 +37,15 @@ public class Main{
 class OptionsDialog extends JDialog{
     private JRadioButton v1, v2, h1, h2;    // References to the controls
     private JComboBox selDimension;
+    private JComboBox selDifficulty;
     private JCheckBox activarSwap;
     private GameWindow juego;
-    
+
     /** Shows the dialog to create a new match
      *  @param principal    Reference to the main game window */
     public OptionsDialog(GameWindow principal){
         super(principal, "New Game", true);
-        setSize(300, 350);
+        setSize(300, 380);
         setResizable(false);
         
         juego = principal;
@@ -52,22 +53,22 @@ class OptionsDialog extends JDialog{
         Container panel = getContentPane();
         panel.setLayout(null);
         
-        JPanel opciones = new JPanel();        
+        JPanel opciones = new JPanel();
         JPanel vertical = new JPanel();
         JPanel horizontal = new JPanel();
         opciones.setBorder(new TitledBorder("Game Options"));
         vertical.setBorder(new TitledBorder("Player 1 (vertical)"));
         horizontal.setBorder(new TitledBorder("Player 2 (horizontal)"));
-        opciones.setBounds(10, 10, 280, 100);
-        vertical.setBounds(10, 120, 280, 80);
-        horizontal.setBounds(10, 210, 280, 80); 
+        opciones.setBounds(10, 10, 280, 130);
+        vertical.setBounds(10, 150, 280, 80);
+        horizontal.setBounds(10, 240, 280, 80);
         panel.add(opciones);
         panel.add(vertical);
         panel.add(horizontal);
-        
-        JButton Ok = new JButton();        
+
+        JButton Ok = new JButton();
         Ok.addActionListener(new AcceptHandler());
-        Ok.setBounds(190, 290, 100, 30);
+        Ok.setBounds(190, 320, 100, 30);
         Ok.setText("Accept");
         panel.add(Ok);
               
@@ -88,13 +89,21 @@ class OptionsDialog extends JDialog{
         selDimension.addItem("5 x 5");
         selDimension.addItem("6 x 6");
         selDimension.addItem("7 x 7");
-        
+
+        selDifficulty = new JComboBox();
+        selDifficulty.addItem("Normal Mode (Level 1)");
+        selDifficulty.addItem("Expert Mode (Level 2)");
+        selDifficulty.addItem("Master Mode (Level 3)");
+
         JLabel etiDimension = new JLabel("Dimension: ");
+        JLabel etiDifficulty = new JLabel("Difficulty: ");
         activarSwap = new JCheckBox("Enable swap rule");
         activarSwap.setSelected(true);
-        
+
         opciones.add(etiDimension);
         opciones.add(selDimension);
+        opciones.add(etiDifficulty);
+        opciones.add(selDifficulty);
         opciones.add(activarSwap);
         vertical.add(v1); 
         vertical.add(v2);
@@ -107,12 +116,13 @@ class OptionsDialog extends JDialog{
         public void actionPerformed(ActionEvent e){
             int v, h;
             int dim;
-            
+            int difficulty;
+
             if(v1.isSelected()) v = 0;
             else v = 1;
             if(h1.isSelected()) h = 0;
             else h = 1;
-            
+
             switch(selDimension.getSelectedIndex()){
             case 0:
                 dim = 5;
@@ -123,8 +133,12 @@ class OptionsDialog extends JDialog{
             default:
                 dim = 7;
             }
-            dispose();      
-            juego.newGame(dim, v, h, activarSwap.isSelected());
+
+            // Get difficulty level (1, 2, or 3)
+            difficulty = selDifficulty.getSelectedIndex() + 1;
+
+            dispose();
+            juego.newGame(dim, v, h, activarSwap.isSelected(), difficulty);
         }
     }
 }
@@ -200,8 +214,8 @@ class GameWindow extends JFrame{
     public GameWindow(int dimension, int tipoVertical, int tipoHorizontal, boolean swap){
         Dimension = dimension;
         yo = this;
-        newGame(dimension, tipoVertical, tipoHorizontal, swap);
-        setResizable(false);          
+        newGame(dimension, tipoVertical, tipoHorizontal, swap, 1);
+        setResizable(false);
         setTitle("Hexodus");
     }
     
@@ -209,8 +223,9 @@ class GameWindow extends JFrame{
      *  @param dim      Board dimension of the new game
      *  @param tipoV    Type of the vertical player
      *  @param tipoH    Type of the horizontal player
-     *  @param swap     True if the swap rule is enabled, false otherwise */
-    public void newGame(int dim, int tipoV, int tipoH, boolean swap){
+     *  @param swap     True if the swap rule is enabled, false otherwise
+     *  @param difficulty Difficulty level (1 = Normal, 2 = Expert, 3 = Master) */
+    public void newGame(int dim, int tipoV, int tipoH, boolean swap, int difficulty){
         Dimension = dim;
         
         int width, height;
@@ -319,15 +334,23 @@ class GameWindow extends JFrame{
         for(int i = 0; i < menus.length; i++){
             statusBarMenu.add(menus[i]);
         }
-        hexodus[1].setSelected(true);
-        setJMenuBar(statusBarMenu);  
+        // Set the appropriate difficulty menu item based on selected difficulty
+        hexodus[difficulty].setSelected(true);
+        setJMenuBar(statusBarMenu);
         setVisible(true);
         
         uno = new Player(tipoV, 1);
         dos = new Player(tipoH, 0);
-        
+
         p = new Match(dim, swap);
-        
+
+        // Set the difficulty level for the match
+        try {
+            p.setLevel(difficulty);
+        } catch (game.IncorrectLevel ex) {
+            ex.printStackTrace();
+        }
+
         // Forces the window to be redrawn
         Graphics gf = getGraphics();
         if (gf != null) paintComponents(gf);
