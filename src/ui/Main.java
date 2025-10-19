@@ -294,12 +294,13 @@ class GameWindow extends JFrame{
         
         menus = new JMenu[] {new JMenu("Game"), new JMenu("Hexodus"), new JMenu("Help")};
         JMenuItem[] juego = {new JMenuItem("New Game...")};
-        JMenuItem[] hexodus = {new JMenuItem("Suggest Move"), new JRadioButtonMenuItem("Normal Mode"), new JRadioButtonMenuItem("Expert Mode")};
+        JMenuItem[] hexodus = {new JMenuItem("Suggest Move"), new JRadioButtonMenuItem("Normal Mode"), new JRadioButtonMenuItem("Expert Mode"), new JRadioButtonMenuItem("Master Mode")};
         JMenuItem[] ayuda = {new JMenuItem("About...")};
-        
+
         ButtonGroup nivel = new ButtonGroup();
         nivel.add(hexodus[1]);
         nivel.add(hexodus[2]);
+        nivel.add(hexodus[3]);
         
         for(int i = 0; i < juego.length; i++){
             menus[0].add(juego[i]);
@@ -596,6 +597,13 @@ class GameWindow extends JFrame{
                 case 2:
                     try {
                         p.setLevel(2);
+                    } catch (IncorrectLevel ex) {
+                        ex.printStackTrace();
+                    }
+                    break;
+                case 3:
+                    try {
+                        p.setLevel(3);
                     } catch (IncorrectLevel ex) {
                         ex.printStackTrace();
                     }

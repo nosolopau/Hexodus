@@ -34,9 +34,9 @@ public class Match{
     }
 
     /** Sets the heuristic level
-     *  @param level    The new heuristic level */
+     *  @param level    The new heuristic level (1, 2, or 3) */
     public void setLevel(int level) throws IncorrectLevel{
-        if((level == 1) || (level == 2))
+        if((level >= 1) && (level <= 3))
             engine.setLevel(level);
         else throw new IncorrectLevel();
     }

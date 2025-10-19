@@ -251,6 +251,7 @@ public class HeuristicBenchmark {
             {6, 1},  // Standard board, level 1
             {3, 2},  // Small board, level 2
             {5, 2},  // Medium board, level 2
+            {3, 3},  // Small board, level 3 (master mode - very slow!)
         };
 
         Map<String, List<GameStats>> allResults = new LinkedHashMap<>();
