@@ -391,7 +391,7 @@ public class Simulation {
             nextsCaducar.clear();
         }
         
-        ArrayList Visitados = new ArrayList();      // Creates a list for visited nodes
+        HashSet<Cell> Visitados = new HashSet<Cell>();      // Creates a set for visited nodes (O(1) contains)
 
         char superior;
         char tierra;
