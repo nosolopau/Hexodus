@@ -1,0 +1,133 @@
+HEXODUS AI PERFORMANCE BENCHMARK
+Generated: Sat Oct 18 22:02:55 PDT 2025
+Processors: 10
+
+Running 3 games: 3x3 board, Level 1
+============================================================
+Game 1/3... 0.1s (7 moves)
+Game 2/3... 0.0s (7 moves)
+Game 3/3... 0.0s (7 moves)
+
+============================================================
+SUMMARY STATISTICS
+============================================================
+Board Size:           3x3
+Difficulty Level:     1
+Games Played:         3
+------------------------------------------------------------
+Avg Game Duration:    0.07 seconds
+Avg Moves per Game:   7.0
+Avg Time per Move:    10.0 ms
+Median Move Time:     4.3 ms
+Min Move Time:        0.0 ms
+Max Move Time:        70.0 ms
+Avg First 5 Moves:    11.2 ms
+Avg Last 5 Moves:     8.2 ms
+============================================================
+
+Running 3 games: 5x5 board, Level 1
+============================================================
+Game 1/3... 2.9s (21 moves)
+Game 2/3... 0.6s (21 moves)
+Game 3/3... 0.5s (21 moves)
+
+============================================================
+SUMMARY STATISTICS
+============================================================
+Board Size:           5x5
+Difficulty Level:     1
+Games Played:         3
+------------------------------------------------------------
+Avg Game Duration:    1.30 seconds
+Avg Moves per Game:   21.0
+Avg Time per Move:    61.5 ms
+Median Move Time:     21.0 ms
+Min Move Time:        0.0 ms
+Max Move Time:        1398.9 ms
+Avg First 5 Moves:    183.5 ms
+Avg Last 5 Moves:     3.7 ms
+============================================================
+
+Running 3 games: 6x6 board, Level 1
+============================================================
+Game 1/3... 2.7s (33 moves)
+Game 2/3... 2.5s (33 moves)
+Game 3/3... 2.5s (33 moves)
+
+============================================================
+SUMMARY STATISTICS
+============================================================
+Board Size:           6x6
+Difficulty Level:     1
+Games Played:         3
+------------------------------------------------------------
+Avg Game Duration:    2.56 seconds
+Avg Moves per Game:   33.0
+Avg Time per Move:    77.1 ms
+Median Move Time:     10.6 ms
+Min Move Time:        0.0 ms
+Max Move Time:        403.4 ms
+Avg First 5 Moves:    243.3 ms
+Avg Last 5 Moves:     1.4 ms
+============================================================
+
+Running 3 games: 3x3 board, Level 2
+============================================================
+Game 1/3... 0.0s (7 moves)
+Game 2/3... 0.0s (7 moves)
+Game 3/3... 0.0s (7 moves)
+
+============================================================
+SUMMARY STATISTICS
+============================================================
+Board Size:           3x3
+Difficulty Level:     2
+Games Played:         3
+------------------------------------------------------------
+Avg Game Duration:    0.00 seconds
+Avg Moves per Game:   7.0
+Avg Time per Move:    0.6 ms
+Median Move Time:     0.2 ms
+Min Move Time:        0.0 ms
+Max Move Time:        3.6 ms
+Avg First 5 Moves:    0.8 ms
+Avg Last 5 Moves:     0.4 ms
+============================================================
+
+Running 3 games: 5x5 board, Level 2
+============================================================
+Game 1/3... 2.4s (23 moves)
+Game 2/3... 2.4s (23 moves)
+Game 3/3... 2.4s (23 moves)
+
+============================================================
+SUMMARY STATISTICS
+============================================================
+Board Size:           5x5
+Difficulty Level:     2
+Games Played:         3
+------------------------------------------------------------
+Avg Game Duration:    2.41 seconds
+Avg Moves per Game:   23.0
+Avg Time per Move:    104.5 ms
+Median Move Time:     3.6 ms
+Min Move Time:        0.0 ms
+Max Move Time:        962.5 ms
+Avg First 5 Moves:    407.4 ms
+Avg Last 5 Moves:     0.5 ms
+============================================================
+
+
+================================================================================
+COMPARISON TABLE
+================================================================================
+Config       | Avg Game | Avg Move     | Moves/Game   | Throughput
+--------------------------------------------------------------------------------
+3x3_L1       |    0.07s |       10.0 ms |        7.0 |    94.37 m/s
+5x5_L1       |    1.30s |       61.5 ms |       21.0 |    16.17 m/s
+6x6_L1       |    2.56s |       77.1 ms |       33.0 |    12.88 m/s
+3x3_L2       |    0.00s |        0.6 ms |        7.0 |  1549.42 m/s
+5x5_L2       |    2.41s |      104.5 ms |       23.0 |     9.55 m/s
+================================================================================
+
+Benchmark completed successfully!

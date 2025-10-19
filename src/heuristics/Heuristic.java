@@ -1,5 +1,6 @@
 package heuristics;
 import java.util.*;
+import java.util.concurrent.*;
 
 
 /**
@@ -183,11 +184,12 @@ class SingleThread extends Heuristic{
 }
 
 /**
- *  Heuristic adapted to multi-processor systems
+ *  Heuristic adapted to multi-processor systems using thread pooling
  */
 class MultiThread extends Heuristic{
     private Square best;
     private Simulation [] base;
+    private ExecutorService executor;  // Thread pool for move evaluation
 
     public MultiThread(int dim, int depth, boolean swap) {
         super(dim, depth, swap);
@@ -198,6 +200,11 @@ class MultiThread extends Heuristic{
         for(int i = 0; i < dimension*dimension; i++){
             base[i] = new Simulation(dimension);
         }
+
+        // Create thread pool sized to available processors
+        // This pool will be reused across all move evaluations
+        int numThreads = Runtime.getRuntime().availableProcessors();
+        executor = Executors.newFixedThreadPool(numThreads);
     }
 
     public void newMove(int row, int column, int color){
@@ -223,46 +230,41 @@ class MultiThread extends Heuristic{
 
         best = null;
 
-        /* For each possible move, creates a thread that evaluates it along with all
-         * possibilities that follow */
+        /* For each possible move, submit a task to the thread pool that evaluates it
+         * along with all possibilities that follow */
         ArrayList <Square> free = base[0].getFreeCells();
         int numFreeCells = free.size();
 
-        // Optimization: Allocate thread arrays sized exactly to the number of free cells
-        // instead of dimension² (saves memory especially in late game)
-        GameThread [] threads = new GameThread [numFreeCells];
-        double [] r = new double [numFreeCells];
-        Cell [] cells = new Cell [numFreeCells];
-
-        Iterator <Square> iterator = free.iterator();
-        int i = 0;  // Number of threads created by the system
-        while(iterator.hasNext()){
-            Square c1 = iterator.next();
-            threads[i] = new GameThread(base[i], c1, color);
-            threads[i].start();
-            cells[i] = c1;
-            i++;
+        // Submit all evaluation tasks to the thread pool
+        List<Future<MoveEvaluation>> futures = new ArrayList<>(numFreeCells);
+        for(int i = 0; i < numFreeCells; i++){
+            Square c1 = free.get(i);
+            MoveEvaluationTask task = new MoveEvaluationTask(base[i], c1, color);
+            futures.add(executor.submit(task));
         }
 
-        for(int k = 0; k < i; k++){
+        // Wait for all tasks to complete and collect results
+        List<MoveEvaluation> results = new ArrayList<>(numFreeCells);
+        for(Future<MoveEvaluation> future : futures){
             try {
-                threads[k].join();
-            } catch (InterruptedException ex) {
+                results.add(future.get());
+            } catch (InterruptedException | ExecutionException ex) {
                 ex.printStackTrace();
+                // If a task fails, use a default poor evaluation
+                results.add(new MoveEvaluation(0.0, null));
             }
         }
 
-        /* According to values returned by threads, and depending on whether it's
-         * the minimizing or maximizing player, searches for the best available value
-         * and returns the move associated with it */
+        /* According to values returned by tasks, and depending on whether it's
+         * the minimizing or maximizing player, find the best available value
+         * and return the move associated with it */
         int bestIndex = 0;
-        double tmp = 0;
         double bestValue;
         switch(color){
         case 0:
             bestValue = Double.POSITIVE_INFINITY;
-            for(int k = 0; k < i; k++){
-                tmp = threads[k].getValue();
+            for(int k = 0; k < results.size(); k++){
+                double tmp = results.get(k).value;
                 if(tmp < bestValue){
                     bestValue = tmp;
                     bestIndex = k;
@@ -271,8 +273,8 @@ class MultiThread extends Heuristic{
             break;
         case 1:
             bestValue = Double.NEGATIVE_INFINITY;
-            for(int k = 0; k < i; k++){
-                tmp = threads[k].getValue();
+            for(int k = 0; k < results.size(); k++){
+                double tmp = results.get(k).value;
                 if(tmp > bestValue){
                     bestValue = tmp;
                     bestIndex = k;
@@ -281,8 +283,9 @@ class MultiThread extends Heuristic{
             break;
         }
 
-        vector[0] = threads[bestIndex].getCell().getRow();
-        vector[1] = threads[bestIndex].getCell().getColumn();
+        Square bestCell = results.get(bestIndex).cell;
+        vector[0] = bestCell.getRow();
+        vector[1] = bestCell.getColumn();
 
         return vector;
     }
@@ -342,42 +345,68 @@ class MultiThread extends Heuristic{
     }
 
     /**
-     *  Thread that executes a search in the tree following the move passed
-     *  in the constructor and returns the value of its branch to the procedure
-     *  that invokes it. */
-    class GameThread extends Thread{
-        private Simulation base;    // Simulation from which the thread starts
-        private int color;          // Color of the player executing the move
-        private double value;       // Value associated with the thread's move
+     * Result of evaluating a single move
+     */
+    private static class MoveEvaluation {
+        final double value;
+        final Square cell;
 
-        /** Creates a new thread to simulate square c on simulation s */
-        public GameThread(Simulation s, Square c, int color){
+        MoveEvaluation(double value, Square cell) {
+            this.value = value;
+            this.cell = cell;
+        }
+    }
+
+    /**
+     *  Task that executes a search in the tree following the move passed
+     *  in the constructor and returns the value and cell.
+     *  Implements Callable for use with ExecutorService thread pool. */
+    class MoveEvaluationTask implements Callable<MoveEvaluation>{
+        private Simulation base;    // Simulation from which the task starts
+        private int color;          // Color of the player executing the move
+
+        /** Creates a new task to simulate square c on simulation s */
+        public MoveEvaluationTask(Simulation s, Square c, int color){
             base = s;
             Simulation sim = new Simulation(base, c, color);
             this.color = color;
             base = sim;
         }
 
-        /** Executes the thread, which performs an alpha-beta search */
-        public void run() {
+        /** Executes the task, which performs an alpha-beta search */
+        public MoveEvaluation call() {
+            double value;
             switch(color){
             case 1:
                 value = alphaBetaMin(base, maxDepth - 1, 0.0, Double.POSITIVE_INFINITY);
                 break;
             case 0:
                 value = alphaBetaMax(base, maxDepth - 1, 0.0, Double.POSITIVE_INFINITY);
+                break;
+            default:
+                value = 0.0;
             }
 
+            Square cell = base.getTargetCell();
             base.restore();
-        }
 
-        /** Returns the move's value */
-        public double getValue(){
-            return value;
+            return new MoveEvaluation(value, cell);
         }
+    }
 
-        public Square getCell(){
-            return base.getTargetCell();
+    /**
+     * Cleanup method to shutdown the executor service
+     */
+    public void shutdown() {
+        if (executor != null) {
+            executor.shutdown();
+            try {
+                if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+                    executor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                executor.shutdownNow();
+            }
         }
     }
 }
