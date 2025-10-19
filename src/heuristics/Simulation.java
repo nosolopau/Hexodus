@@ -323,13 +323,13 @@ public class Simulation {
                                         
                                         if((r1 != null) && (r2 != null)){
                                             ic1 = r1.getIterator();
-                                            ic2 = r2.getIterator();
 
                                             /* The following block ensures that all possible combinations
                                              * of paths from g - g1 and g - g2 are traversed. The nested while ensures that
-                                             * all cases are studied. */                                     
+                                             * all cases are studied. */
                                             while(ic1.hasNext()){
                                                 Path c1 = (Path) ic1.next();
+                                                ic2 = r2.getIterator();  // Reset iterator for each c1
                                                 while(ic2.hasNext()){
                                                     Path c2 = (Path) ic2.next();
                                                     if(c1.hasEmptyIntersection(c2) && !c2.contains(cg1) && !c1.contains(cg2)){
