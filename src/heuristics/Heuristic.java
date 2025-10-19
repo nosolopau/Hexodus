@@ -193,6 +193,7 @@ class MultiThread extends Heuristic{
         super(dim, depth, swap);
         best = null;
 
+        // Create all needed simulations upfront (needed for first move)
         base = new Simulation [dimension*dimension];
         for(int i = 0; i < dimension*dimension; i++){
             base[i] = new Simulation(dimension);
@@ -203,6 +204,7 @@ class MultiThread extends Heuristic{
         Simulation newSim = null;
         best = null;
 
+        // Update all simulations with the new move
         for(int i = 0; i < dimension*dimension; i++){
             newSim = new Simulation(base[i], row, column, color);
             base[i] = newSim;
@@ -220,13 +222,18 @@ class MultiThread extends Heuristic{
         }
 
         best = null;
-        GameThread [] threads = new GameThread [dimension*dimension];
-        double [] r = new double [dimension*dimension];
-        Cell [] cells = new Cell [dimension*dimension];
 
         /* For each possible move, creates a thread that evaluates it along with all
          * possibilities that follow */
         ArrayList <Square> free = base[0].getFreeCells();
+        int numFreeCells = free.size();
+
+        // Optimization: Allocate thread arrays sized exactly to the number of free cells
+        // instead of dimension² (saves memory especially in late game)
+        GameThread [] threads = new GameThread [numFreeCells];
+        double [] r = new double [numFreeCells];
+        Cell [] cells = new Cell [numFreeCells];
+
         Iterator <Square> iterator = free.iterator();
         int i = 0;  // Number of threads created by the system
         while(iterator.hasNext()){
