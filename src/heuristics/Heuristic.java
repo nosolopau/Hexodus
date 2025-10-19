@@ -61,6 +61,26 @@ public abstract class Heuristic {
             return true;
         else return false;
     }
+
+    /** Sorts moves by proximity to a target square for better alpha-beta pruning.
+     *  Moves closer to the target are evaluated first, improving cutoff rates.
+     *  @param moves List of candidate moves to sort
+     *  @param target The reference square (typically the last move played) */
+    protected void sortByProximity(ArrayList<Square> moves, Square target) {
+        if (target == null) return;  // No sorting if no reference point
+
+        final int targetRow = target.getRow();
+        final int targetCol = target.getColumn();
+
+        // Sort by Manhattan distance to target (stable sort maintains order for ties)
+        Collections.sort(moves, new Comparator<Square>() {
+            public int compare(Square s1, Square s2) {
+                int dist1 = Math.abs(s1.getRow() - targetRow) + Math.abs(s1.getColumn() - targetCol);
+                int dist2 = Math.abs(s2.getRow() - targetRow) + Math.abs(s2.getColumn() - targetCol);
+                return Integer.compare(dist1, dist2);
+            }
+        });
+    }
 }
 
 /**
@@ -132,6 +152,7 @@ class SingleThread extends Heuristic{
         }
 
         ArrayList <Square> free = s.getFreeCells();
+        sortByProximity(free, s.getTargetCell());  // Order by proximity to last move
         Iterator <Square> iterator = free.iterator();
         while(iterator.hasNext()){
             Square c = iterator.next();
@@ -160,6 +181,7 @@ class SingleThread extends Heuristic{
         }
 
         ArrayList <Square> free = s.getFreeCells();
+        sortByProximity(free, s.getTargetCell());  // Order by proximity to last move
         Iterator <Square> iterator = free.iterator();
         while(iterator.hasNext()){
             Square c = (Square)iterator.next();
@@ -297,6 +319,7 @@ class MultiThread extends Heuristic{
         }
 
         ArrayList <Square> free = s.getFreeCells();
+        sortByProximity(free, s.getTargetCell());  // Order by proximity to last move
         Iterator <Square> iterator = free.iterator();
         while(iterator.hasNext()){
             Square c = iterator.next();
@@ -324,6 +347,7 @@ class MultiThread extends Heuristic{
         }
 
         ArrayList <Square> free = s.getFreeCells();
+        sortByProximity(free, s.getTargetCell());  // Order by proximity to last move
         Iterator <Square> iterator = free.iterator();
         while(iterator.hasNext()){
             Square c = (Square)iterator.next();
