@@ -268,12 +268,21 @@ public class Board {
      *  @return List of free squares */
     public ArrayList<Square> getCellsLibres(){
         ArrayList<Square> lis = new ArrayList<Square>();
-        
+
         for(int i = 0; i < dimension; i++)
             for(int j = 0; j < dimension; j++)
                 if(squares[i][j].isEmpty()) lis.add((Square)squares[i][j]);
-        
+
         return lis;
+    }
+
+    /** Populates the provided list with free cells.
+     *  Optimization to avoid creating new ArrayList in alpha-beta search.
+     *  @param lis ArrayList to populate with free cells */
+    public void getCellsLibresInto(ArrayList<Square> lis){
+        for(int i = 0; i < dimension; i++)
+            for(int j = 0; j < dimension; j++)
+                if(squares[i][j].isEmpty()) lis.add((Square)squares[i][j]);
     }
     
     /** Returns the list G associated with the board, containing the squares of the color

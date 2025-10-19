@@ -241,6 +241,13 @@ public class Simulation {
     public ArrayList<Square> getFreeCells(){
         return board.getCellsLibres();
     }
+
+    /** Populates the provided list with free cells instead of creating a new ArrayList.
+     *  Optimization to avoid object allocation in alpha-beta search.
+     *  @param list ArrayList to populate with free cells */
+    public void getFreeCellsInto(ArrayList<Square> list){
+        board.getCellsLibresInto(list);
+    }
     
     /** Adds a removed cell to the list to undo changes
      *  @param m The HashMap to which the cell in question must be added

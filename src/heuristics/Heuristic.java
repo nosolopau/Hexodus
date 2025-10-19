@@ -117,6 +117,7 @@ class SingleThread extends Heuristic{
     private Square bestMax;
     private Square bestMin;
     private Square[][] killerMoves;  // Killer moves for alpha-beta pruning [depth][0=primary, 1=secondary]
+    private ArrayList<Square>[] freeBuffers;  // Reusable buffers for each recursion level
 
     public SingleThread(int dim, int depth, boolean swap) {
         super(dim, depth, swap);
@@ -125,6 +126,12 @@ class SingleThread extends Heuristic{
         bestMin = null;
         base = new Simulation(dimension);
         killerMoves = new Square[10][2];  // Support up to depth 9 (larger than any reasonable level)
+
+        // Pre-allocate ArrayList buffers for each recursion level to avoid creating new ones
+        freeBuffers = new ArrayList[10];
+        for (int i = 0; i < 10; i++) {
+            freeBuffers[i] = new ArrayList<Square>();
+        }
     }
 
     public void newMove(int row, int column, int color){
@@ -179,7 +186,10 @@ class SingleThread extends Heuristic{
             return s.calculateValue();
         }
 
-        ArrayList <Square> free = s.getFreeCells();
+        // Reuse buffer instead of creating new ArrayList
+        ArrayList <Square> free = freeBuffers[level];
+        free.clear();
+        s.getFreeCellsInto(free);  // Populate buffer
         sortByProximityAndKillers(free, s.getTargetCell(), killerMoves[level]);  // Order by killers then proximity
         Iterator <Square> iterator = free.iterator();
         while(iterator.hasNext()){
@@ -213,7 +223,10 @@ class SingleThread extends Heuristic{
             return s.calculateValue();
         }
 
-        ArrayList <Square> free = s.getFreeCells();
+        // Reuse buffer instead of creating new ArrayList
+        ArrayList <Square> free = freeBuffers[level];
+        free.clear();
+        s.getFreeCellsInto(free);  // Populate buffer
         sortByProximityAndKillers(free, s.getTargetCell(), killerMoves[level]);  // Order by killers then proximity
         Iterator <Square> iterator = free.iterator();
         while(iterator.hasNext()){
@@ -251,6 +264,7 @@ class MultiThread extends Heuristic{
     private Simulation [] base;
     private ExecutorService executor;  // Thread pool for move evaluation
     private Square[][] killerMoves;  // Killer moves for alpha-beta pruning [depth][0=primary, 1=secondary]
+    private ThreadLocal<ArrayList<Square>[]> threadLocalBuffers;  // Thread-local reusable buffers
 
     public MultiThread(int dim, int depth, boolean swap) {
         super(dim, depth, swap);
@@ -267,6 +281,18 @@ class MultiThread extends Heuristic{
         int numThreads = Runtime.getRuntime().availableProcessors();
         executor = Executors.newFixedThreadPool(numThreads);
         killerMoves = new Square[10][2];  // Support up to depth 9 (larger than any reasonable level)
+
+        // Pre-allocate thread-local ArrayList buffers for each recursion level
+        threadLocalBuffers = new ThreadLocal<ArrayList<Square>[]>() {
+            @Override
+            protected ArrayList<Square>[] initialValue() {
+                ArrayList<Square>[] buffers = new ArrayList[10];
+                for (int i = 0; i < 10; i++) {
+                    buffers[i] = new ArrayList<Square>();
+                }
+                return buffers;
+            }
+        };
     }
 
     public void newMove(int row, int column, int color){
@@ -364,7 +390,11 @@ class MultiThread extends Heuristic{
             return v;
         }
 
-        ArrayList <Square> free = s.getFreeCells();
+        // Reuse thread-local buffer instead of creating new ArrayList
+        ArrayList<Square>[] buffers = threadLocalBuffers.get();
+        ArrayList <Square> free = buffers[level];
+        free.clear();
+        s.getFreeCellsInto(free);  // Populate buffer
         sortByProximityAndKillers(free, s.getTargetCell(), killerMoves[level]);  // Order by killers then proximity
         Iterator <Square> iterator = free.iterator();
         while(iterator.hasNext()){
@@ -397,7 +427,11 @@ class MultiThread extends Heuristic{
             return v;
         }
 
-        ArrayList <Square> free = s.getFreeCells();
+        // Reuse thread-local buffer instead of creating new ArrayList
+        ArrayList<Square>[] buffers = threadLocalBuffers.get();
+        ArrayList <Square> free = buffers[level];
+        free.clear();
+        s.getFreeCellsInto(free);  // Populate buffer
         sortByProximityAndKillers(free, s.getTargetCell(), killerMoves[level]);  // Order by killers then proximity
         Iterator <Square> iterator = free.iterator();
         while(iterator.hasNext()){
