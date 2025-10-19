@@ -13,20 +13,19 @@ class NonexistentSquare extends Exception{};
  */
 
 public class Simulation {
-    private int K;   // Tamao mximo del camino en las llamadas recursivas OR (entre 5 y 6)
+    private int K;                      // Max size for path (5 to 6)
     private HashMap eliminatedNeighbors, eliminatedNeighbors2;
     private ArrayList <Cell> affectedNeighbors ;
     private ArrayList renew;
-    private ArrayList <Cell> G[];         // List of G squares
-    private Connections C[];        // List of virtual connections for each player
-    private Connections SC[];       // List of virtual semi-connections for each player
+    private ArrayList <Cell> G[];       // List of G squares
+    private Connections C[];            // List of virtual connections for each player
+    private Connections SC[];           // List of virtual semi-connections for each player
     private Connections connections;
-    private boolean newsConnections;   // Stores whether C or SC were created in the previous iteration
+    private boolean newsConnections;    // Stores whether C or SC were created in the previous iteration
     private Square target;
     private Board board;
     
-    /** Creates the objects common to all simulations. This constructor is
-     *  for internal use, and therefore has private scope */
+    /** Creates the objects common to all simulations. */
     private Simulation(){
         K = 5;
         
