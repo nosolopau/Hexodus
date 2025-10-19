@@ -628,8 +628,8 @@ class GameWindow extends JFrame{
         protected boolean allowed;    // If that square can be clicked again
         
         public CellHandler(int column, int row){
-            column = column;
-            row = row;
+            this.column = column;
+            this.row = row;
             allowed = true;
         }
         

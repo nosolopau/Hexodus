@@ -343,8 +343,8 @@ public class Simulation {
                                                                 if((cg1 instanceof Border) && (cg2 instanceof Border)){
                                                                     if((((((Border)cg1).getName() == 'N') && (((Border)cg2).getName() == 'S')) ||
                                                                             ((((Border)cg1).getName() == 'S') && (((Border)cg2).getName() == 'N'))) ||
-                                                                            (((((Border)cg1).getName() == 'E') && (((Border)cg2).getName() == 'O')) ||
-                                                                            ((((Border)cg1).getName() == 'O') && (((Border)cg2).getName() == 'E'))))
+                                                                            (((((Border)cg1).getName() == 'E') && (((Border)cg2).getName() == 'W')) ||
+                                                                            ((((Border)cg1).getName() == 'W') && (((Border)cg2).getName() == 'E'))))
                                                                         return 0;
                                                                 }
                                                             }
@@ -402,7 +402,7 @@ public class Simulation {
         }
         else{
             superior = 'E';
-            tierra = 'O'; 
+            tierra = 'W';
         }
 
         double M[][];   // A temporary conductance matrix
@@ -515,8 +515,8 @@ public class Simulation {
                 if((g1 instanceof Border) && (g2 instanceof Border)){
                     if((((((Border)g1).getName() == 'N') && (((Border)g2).getName() == 'S')) ||
                             ((((Border)g1).getName() == 'S') && (((Border)g2).getName() == 'N'))) ||
-                            (((((Border)g1).getName() == 'E') && (((Border)g2).getName() == 'O')) ||
-                            ((((Border)g1).getName() == 'O') && (((Border)g2).getName() == 'E'))))
+                            (((((Border)g1).getName() == 'E') && (((Border)g2).getName() == 'W')) ||
+                            ((((Border)g1).getName() == 'W') && (((Border)g2).getName() == 'E'))))
                         return true;
                 }
             }
