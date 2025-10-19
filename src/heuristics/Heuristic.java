@@ -67,17 +67,43 @@ public abstract class Heuristic {
      *  @param moves List of candidate moves to sort
      *  @param target The reference square (typically the last move played) */
     protected void sortByProximity(ArrayList<Square> moves, Square target) {
-        if (target == null) return;  // No sorting if no reference point
+        sortByProximityAndKillers(moves, target, null);
+    }
 
-        final int targetRow = target.getRow();
-        final int targetCol = target.getColumn();
+    /** Sorts moves by killer moves first, then proximity to target.
+     *  @param moves List of candidate moves to sort
+     *  @param target The reference square for proximity sorting
+     *  @param killers Array of killer moves to prioritize [0=primary, 1=secondary] */
+    protected void sortByProximityAndKillers(ArrayList<Square> moves, Square target, final Square[] killers) {
+        final int targetRow = (target != null) ? target.getRow() : -1;
+        final int targetCol = (target != null) ? target.getColumn() : -1;
 
-        // Sort by Manhattan distance to target (stable sort maintains order for ties)
         Collections.sort(moves, new Comparator<Square>() {
             public int compare(Square s1, Square s2) {
-                int dist1 = Math.abs(s1.getRow() - targetRow) + Math.abs(s1.getColumn() - targetCol);
-                int dist2 = Math.abs(s2.getRow() - targetRow) + Math.abs(s2.getColumn() - targetCol);
-                return Integer.compare(dist1, dist2);
+                // Killer moves have highest priority
+                if (killers != null) {
+                    boolean s1IsKiller = (s1.equals(killers[0]) || s1.equals(killers[1]));
+                    boolean s2IsKiller = (s2.equals(killers[0]) || s2.equals(killers[1]));
+
+                    if (s1IsKiller && !s2IsKiller) return -1;  // s1 first
+                    if (s2IsKiller && !s1IsKiller) return 1;   // s2 first
+
+                    // Both killers: primary before secondary
+                    if (s1IsKiller && s2IsKiller) {
+                        if (s1.equals(killers[0])) return -1;
+                        if (s2.equals(killers[0])) return 1;
+                        return 0;
+                    }
+                }
+
+                // No killer advantage: sort by proximity
+                if (target != null) {
+                    int dist1 = Math.abs(s1.getRow() - targetRow) + Math.abs(s1.getColumn() - targetCol);
+                    int dist2 = Math.abs(s2.getRow() - targetRow) + Math.abs(s2.getColumn() - targetCol);
+                    return Integer.compare(dist1, dist2);
+                }
+
+                return 0;  // No sorting criteria
             }
         });
     }
@@ -90,6 +116,7 @@ class SingleThread extends Heuristic{
     private Simulation base;  // Simulation on which new moves are executed
     private Square bestMax;
     private Square bestMin;
+    private Square[][] killerMoves;  // Killer moves for alpha-beta pruning [depth][0=primary, 1=secondary]
 
     public SingleThread(int dim, int depth, boolean swap) {
         super(dim, depth, swap);
@@ -97,6 +124,7 @@ class SingleThread extends Heuristic{
         bestMax = null;
         bestMin = null;
         base = new Simulation(dimension);
+        killerMoves = new Square[10][2];  // Support up to depth 9 (larger than any reasonable level)
     }
 
     public void newMove(int row, int column, int color){
@@ -152,7 +180,7 @@ class SingleThread extends Heuristic{
         }
 
         ArrayList <Square> free = s.getFreeCells();
-        sortByProximity(free, s.getTargetCell());  // Order by proximity to last move
+        sortByProximityAndKillers(free, s.getTargetCell(), killerMoves[level]);  // Order by killers then proximity
         Iterator <Square> iterator = free.iterator();
         while(iterator.hasNext()){
             Square c = iterator.next();
@@ -169,6 +197,11 @@ class SingleThread extends Heuristic{
             n.restore();
 
             if( alpha >= beta ){
+                // Beta cutoff: store this move as a killer
+                if (killerMoves[level][0] == null || !c.equals(killerMoves[level][0])) {
+                    killerMoves[level][1] = killerMoves[level][0];  // Shift secondary
+                    killerMoves[level][0] = c;  // New primary killer
+                }
                 return alpha;
             }
         }
@@ -181,7 +214,7 @@ class SingleThread extends Heuristic{
         }
 
         ArrayList <Square> free = s.getFreeCells();
-        sortByProximity(free, s.getTargetCell());  // Order by proximity to last move
+        sortByProximityAndKillers(free, s.getTargetCell(), killerMoves[level]);  // Order by killers then proximity
         Iterator <Square> iterator = free.iterator();
         while(iterator.hasNext()){
             Square c = (Square)iterator.next();
@@ -198,6 +231,11 @@ class SingleThread extends Heuristic{
             n.restore();
 
             if( alpha >= beta ){
+                // Alpha cutoff: store this move as a killer
+                if (killerMoves[level][0] == null || !c.equals(killerMoves[level][0])) {
+                    killerMoves[level][1] = killerMoves[level][0];  // Shift secondary
+                    killerMoves[level][0] = c;  // New primary killer
+                }
                 return beta;
             }
         }
@@ -212,6 +250,7 @@ class MultiThread extends Heuristic{
     private Square best;
     private Simulation [] base;
     private ExecutorService executor;  // Thread pool for move evaluation
+    private Square[][] killerMoves;  // Killer moves for alpha-beta pruning [depth][0=primary, 1=secondary]
 
     public MultiThread(int dim, int depth, boolean swap) {
         super(dim, depth, swap);
@@ -227,11 +266,18 @@ class MultiThread extends Heuristic{
         // This pool will be reused across all move evaluations
         int numThreads = Runtime.getRuntime().availableProcessors();
         executor = Executors.newFixedThreadPool(numThreads);
+        killerMoves = new Square[10][2];  // Support up to depth 9 (larger than any reasonable level)
     }
 
     public void newMove(int row, int column, int color){
         Simulation newSim = null;
         best = null;
+
+        // Clear killer moves for the new position
+        for(int i = 0; i < killerMoves.length; i++){
+            killerMoves[i][0] = null;
+            killerMoves[i][1] = null;
+        }
 
         // Update all simulations with the new move
         for(int i = 0; i < dimension*dimension; i++){
@@ -319,7 +365,7 @@ class MultiThread extends Heuristic{
         }
 
         ArrayList <Square> free = s.getFreeCells();
-        sortByProximity(free, s.getTargetCell());  // Order by proximity to last move
+        sortByProximityAndKillers(free, s.getTargetCell(), killerMoves[level]);  // Order by killers then proximity
         Iterator <Square> iterator = free.iterator();
         while(iterator.hasNext()){
             Square c = iterator.next();
@@ -334,6 +380,11 @@ class MultiThread extends Heuristic{
             n.restore();
 
             if( alpha >= beta ){
+                // Beta cutoff: store this move as a killer
+                if (killerMoves[level][0] == null || !c.equals(killerMoves[level][0])) {
+                    killerMoves[level][1] = killerMoves[level][0];  // Shift secondary
+                    killerMoves[level][0] = c;  // New primary killer
+                }
                 return alpha;
             }
         }
@@ -347,7 +398,7 @@ class MultiThread extends Heuristic{
         }
 
         ArrayList <Square> free = s.getFreeCells();
-        sortByProximity(free, s.getTargetCell());  // Order by proximity to last move
+        sortByProximityAndKillers(free, s.getTargetCell(), killerMoves[level]);  // Order by killers then proximity
         Iterator <Square> iterator = free.iterator();
         while(iterator.hasNext()){
             Square c = (Square)iterator.next();
@@ -362,6 +413,11 @@ class MultiThread extends Heuristic{
             n.restore();
 
             if( alpha >= beta ){
+                // Alpha cutoff: store this move as a killer
+                if (killerMoves[level][0] == null || !c.equals(killerMoves[level][0])) {
+                    killerMoves[level][1] = killerMoves[level][0];  // Shift secondary
+                    killerMoves[level][0] = c;  // New primary killer
+                }
                 return beta;
             }
         }
