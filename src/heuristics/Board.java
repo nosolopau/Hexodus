@@ -1,65 +1,65 @@
 /*
- * Tablero.java
+ * Board.java
  *
  * Creado el 23 de abril de 2007 a las 16:01
  *
  * Copyright (C) 2006 - 2008 Pablo Torrecilla. GNU General Public License
  */
 
-package heuristica;
+package heuristics;
 import java.util.*;
 
 /**
- * Representa el tablero virtual sobre el que se apoya la heur’stica, cuyas
- * caracter’stica pueden variar para representar la l—gica interna del juego.
+ * Representa el tablero virtual sobre el que se apoya la heurÂ’stica, cuyas
+ * caracterÂ’stica pueden variar para representar la lÂ—gica interna del juego.
  *
  * @author Pau
  * @version 1.0
  */
 
-public class Tablero {
-    private int Dimension;
-    private Casilla c[][];     // Una matriz de celdas
-    private Conexiones T;   // Lista de conexiones virtuales del tablero
-    private Borde n, s, e, o;
-    private ArrayList CaducarOriginal;  // Caminos que caducan en la primera iteracion
-    Celda [] Todas;
+public class Board {
+    private int dimension;
+    private Square squares[][];     // Una matriz de celdas
+    private Connections connections;   // Lista de conexiones virtuales del tablero
+    private Border north, south, east, west;
+    private ArrayList expireOriginal;  // Caminos que caducan en la primera iteracion
+    Cell [] all;
     
-    /** Crea una nueva instancia de Tablero */
-    public Tablero(int dim) {
-        CaducarOriginal = new ArrayList();
-        Dimension = dim;
+    /** Crea una nueva instancia de Board */
+    public Board(int dim) {
+        expireOriginal = new ArrayList();
+        dimension = dim;
         
-        Todas = new Celda [Dimension * Dimension];
+        all = new Cell [dimension * dimension];
         
-        c = new Casilla [Dimension][Dimension];   // Matriz que representa el tablero
-        T = new Conexiones(dim);  // Lista con las conexiones virtuales del tablero
-        
+        squares = new Square [dimension][dimension];   // Matriz que representa el tablero
+        connections = new Connections(dim);  // Lista con las conexiones virtuales del tablero
+
         // Crea las casillas del tablero:
-        for(int i = 0; i < Dimension; i++){
-            for(int j = 0; j < Dimension; j++){
-                c[i][j] = new Casilla(i, j, i * Dimension + j);
-                Todas[i * Dimension + j] = c[i][j];
+        for(int i = 0; i < dimension; i++){
+            for(int j = 0; j < dimension; j++){
+                squares[i][j] = new Square(i, j, i * dimension + j);
+                all[i * dimension + j] = squares[i][j];
             }
         }
-        
+
         // Crea los cuatro bordes de celda
-        n = new Borde(dim*dim+0, 'N');
-        s = new Borde(dim*dim+1, 'S');
-        e = new Borde(dim*dim+2, 'E');
-        o = new Borde(dim*dim+3, 'O');
+        north = new Border(dim*dim+0, 'N');
+        south = new Border(dim*dim+1, 'S');
+        east = new Border(dim*dim+2, 'E');
+        west = new Border(dim*dim+3, 'W');
         
-        /* Inicializa la lista T.
-         * Los datos de inicializaci—n son siempre los mismos, por lo que en algunos casos
-         * concretos se utilizan tablas est‡ticas agrupadas por dimensi—n. Si no
-         * encuentra la tabla de la dimensi—n en cuesti—n, el sistema ejecuta el 
-         * algoritmo para iniciar la lista: 
+        /* Inicializa la list connections.
+         * Los datos de inicializaciÂ—n son siempre los mismos, por lo que en algunos casos
+         * concretos se utilizan tablas estÂ‡ticas agrupadas por dimensiÂ—north. Si no
+         * encuentra la tabla de la dimensiÂ—n en cuestiÂ—n, el sistema ejecuta el 
+         * algoritmo para iniciar la list: 
          * Toma una casilla y crea una CV para cada vecina que encuentra siempre
-         * que cumpla que sean vecinas y que no est‡n ya conectadas en el mismo 
-         * sentido o en el inverso. Enlaza las casillas cargando las listas de
-         * vecinas para cada celda, bas‡ndose en su posici—n en el tablero. */
-        if(Dimension == 3){
-            boolean [][] Mapa = {{false, true, false, true, true, false, false, false, false}, 
+         * que cumpla que sean vecinas y que no estÂ‡n ya conectadas en el mismo 
+         * sentido west en el inverso. Enlaza las casillas cargando las listas de
+         * vecinas para cada celda, basÂ‡ndose en su posiciÂ—n en el tablero. */
+        if(dimension == 3){
+            boolean [][] map = {{false, true, false, true, true, false, false, false, false}, 
                 {false, false, true, false, true, true, false, false, false}, 
                 {false, false, false, false, false, true, false, false, false}, 
                 {false, false, false, false, true, false, true, true, false}, 
@@ -68,23 +68,23 @@ public class Tablero {
                 {false, false, false, false, false, false, false, true, false}, 
                 {false, false, false, false, false, false, false, false, true}, 
                 {false, false, false, false, false, false, false, false, false}};
-            Celda ga = null;
-            Celda gb = null;
-            for(int a = 0; a < Todas.length; a++){
-                for(int b = a; b < Todas.length; b++){
-                    if(Mapa[a][b] == true){
-                        ga = Todas[a];
-                        gb = Todas[b];
-                        T.NuevaConexion(ga, gb);
-                        ga.AgregarVecina(gb);
-                        gb.AgregarVecina(ga);
-                        CaducarOriginal.add(T.InsertarCaminoDirecto(ga, gb));
+            Cell cellA = null;
+            Cell cellB = null;
+            for(int a = 0; a < all.length; a++){
+                for(int b = a; b < all.length; b++){
+                    if(map[a][b] == true){
+                        cellA = all[a];
+                        cellB = all[b];
+                        connections.newConnection(cellA, cellB);
+                        cellA.addNeighbor(cellB);
+                        cellB.addNeighbor(cellA);
+                        expireOriginal.add(connections.insertDirectPath(cellA, cellB));
                     }
                 }
             }
         }
-        else if(Dimension == 5){
-            boolean [][] Mapa = {{false, true, false, false, false, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false}, 
+        else if(dimension == 5){
+            boolean [][] map = {{false, true, false, false, false, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false}, 
                 {false, false, true, false, false, false, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false}, 
                 {false, false, false, true, false, false, false, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false}, 
                 {false, false, false, false, true, false, false, false, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false}, 
@@ -109,23 +109,23 @@ public class Tablero {
                 {false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, true, false}, 
                 {false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, true}, 
                 {false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false}};
-            Celda ga = null;
-            Celda gb = null;    
-            for(int a = 0; a < Todas.length; a++){
-                    for(int b = a; b < Todas.length; b++){
-                        if(Mapa[a][b] == true){
-                            ga = Todas[a];
-                            gb = Todas[b];
-                            T.NuevaConexion(ga, gb);
-                            ga.AgregarVecina(gb);
-                            gb.AgregarVecina(ga);
-                            CaducarOriginal.add(T.InsertarCaminoDirecto(ga, gb));
+            Cell cellA = null;
+            Cell cellB = null;    
+            for(int a = 0; a < all.length; a++){
+                    for(int b = a; b < all.length; b++){
+                        if(map[a][b] == true){
+                            cellA = all[a];
+                            cellB = all[b];
+                            connections.newConnection(cellA, cellB);
+                            cellA.addNeighbor(cellB);
+                            cellB.addNeighbor(cellA);
+                            expireOriginal.add(connections.insertDirectPath(cellA, cellB));
                         }
                     }
                 }
             }
-        else if(Dimension == 7){
-            boolean [][] Mapa = {{false, true, false, false, false, false, false, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false}, 
+        else if(dimension == 7){
+            boolean [][] map = {{false, true, false, false, false, false, false, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false}, 
                 {false, false, true, false, false, false, false, false, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false}, 
                 {false, false, false, true, false, false, false, false, false, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false}, 
                 {false, false, false, false, true, false, false, false, false, false, true, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false}, 
@@ -174,61 +174,61 @@ public class Tablero {
                 {false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, true, false}, 
                 {false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, true}, 
                 {false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false}};
-            Celda ga = null;
-            Celda gb = null;    
-            for(int a = 0; a < Todas.length; a++){
-                for(int b = a; b < Todas.length; b++){
-                    if(Mapa[a][b] == true){
-                        ga = Todas[a];
-                        gb = Todas[b];
-                        T.NuevaConexion(ga, gb);
-                        ga.AgregarVecina(gb);
-                        gb.AgregarVecina(ga);
-                        CaducarOriginal.add(T.InsertarCaminoDirecto(ga, gb));
+            Cell cellA = null;
+            Cell cellB = null;    
+            for(int a = 0; a < all.length; a++){
+                for(int b = a; b < all.length; b++){
+                    if(map[a][b] == true){
+                        cellA = all[a];
+                        cellB = all[b];
+                        connections.newConnection(cellA, cellB);
+                        cellA.addNeighbor(cellB);
+                        cellB.addNeighbor(cellA);
+                        expireOriginal.add(connections.insertDirectPath(cellA, cellB));
                     }
                 }
             }
         }
         else{
-            boolean [][] Mapa2 = new boolean[Dimension*Dimension][Dimension*Dimension];          
+            boolean [][] map2 = new boolean[dimension*dimension][dimension*dimension];          
                     
-            Celda ga = null;
-            Celda gb = null;
-            for(int a = 0; a < Todas.length; a++){
-                for(int b = 0; b < Todas.length; b++){
+            Cell cellA = null;
+            Cell cellB = null;
+            for(int a = 0; a < all.length; a++){
+                for(int b = 0; b < all.length; b++){
                     try{
-                        ga = Todas[a];
-                        gb = Todas[b];
-                        if((a != b) && (SonVecinas(ga, gb)) 
-                                && (!T.HayConexion(ga, gb))
-                                && (!T.HayConexion(gb, ga))){
-                            T.NuevaConexion(ga, gb);
-                            ga.AgregarVecina(gb);
-                            gb.AgregarVecina(ga);
-                            // Mapa2[a][b] = true;
-                            CaducarOriginal.add(T.InsertarCaminoDirecto(ga, gb));
+                        cellA = all[a];
+                        cellB = all[b];
+                        if((a != b) && (areNeighbors(cellA, cellB)) 
+                                && (!connections.hasConnection(cellA, cellB))
+                                && (!connections.hasConnection(cellB, cellA))){
+                            connections.newConnection(cellA, cellB);
+                            cellA.addNeighbor(cellB);
+                            cellB.addNeighbor(cellA);
+                            // map2[a][b] = true;
+                            expireOriginal.add(connections.insertDirectPath(cellA, cellB));
                         }
                     }
-                    catch (CasillaInexistente ex) {
+                    catch (NonexistentSquare ex) {
                         ex.printStackTrace();
                     }                
                 }
             }
             
 /*          Mostrar los datos de conexiones listos para tabularse
- *          Esta secci—n no est‡ documentada y sirve para a–adir tablas est‡ticas
+ *          Esta secciÂ—n no estÂ‡ documentada y sirve para aÂ–adir tablas estÂ‡ticas
  *          para dimensiones mayores y mejorar la eficiencia del sistema. Para que
- *          funcione hay que descomentar Mapa2[a][b] = true en la secci—n anterior.
+ *          funcione hay que descomentar map2[a][b] = true en la secciÂ—n anterior.
  *
             System.out.println("---");
-            for(int a = 0; a < Todas.length; a++){
+            for(int a = 0; a < all.length; a++){
                 System.out.print("{");
-                for(int b = 0; b < Todas.length; b++){
-                    if(b == Todas.length - 1)
-                        System.out.print(Mapa2[a][b]);
-                    else System.out.print(Mapa2[a][b] + ", ");
+                for(int b = 0; b < all.length; b++){
+                    if(b == all.length - 1)
+                        System.out.print(map2[a][b]);
+                    else System.out.print(map2[a][b] + ", ");
                 }
-                if(a == Todas.length - 1) System.out.println("}" );
+                if(a == all.length - 1) System.out.println("}" );
                 else System.out.println("}, " );
             }
  */
@@ -238,175 +238,175 @@ public class Tablero {
         /* Inserta caminos y establece vecinas entre las casillas y los bordes
          * en contacto: */
         for(int i = 0; i < dim; i++){
-            T.InsertarCaminoDirecto(n, c[0][i]);
-            T.InsertarCaminoDirecto(s, c[dim-1][i]);
-            c[0][i].AgregarVecina(n);
-            n.AgregarVecina(c[0][i]);
-            s.AgregarVecina(c[dim-1][i]);
-            c[dim-1][i].AgregarVecina(s);
+            connections.insertDirectPath(north, squares[0][i]);
+            connections.insertDirectPath(south, squares[dim-1][i]);
+            squares[0][i].addNeighbor(north);
+            north.addNeighbor(squares[0][i]);
+            south.addNeighbor(squares[dim-1][i]);
+            squares[dim-1][i].addNeighbor(south);
 
-            T.InsertarCaminoDirecto(o, c[i][0]);
-            T.InsertarCaminoDirecto(e, c[i][dim-1]);
-            c[i][0].AgregarVecina(o);
-            o.AgregarVecina(c[i][0]);
-            e.AgregarVecina(c[i][dim-1]);
-            c[i][dim-1].AgregarVecina(e);
+            connections.insertDirectPath(west, squares[i][0]);
+            connections.insertDirectPath(east, squares[i][dim-1]);
+            squares[i][0].addNeighbor(west);
+            west.addNeighbor(squares[i][0]);
+            east.addNeighbor(squares[i][dim-1]);
+            squares[i][dim-1].addNeighbor(east);
         }
     }
     
-    /** Devuelve la lista de caminos que van a caducar en una primera iteraci—n
-     *  @return Lista de caminos que deben caducar en la primera iteraci—n */
-    public ArrayList ObtenerListaCaducar(){
-        return CaducarOriginal;
+    /** Devuelve la list de caminos que van a caducar en una primera iteraciÂ—n
+     *  @return Lista de caminos que deben caducar en la primera iteraciÂ—n */
+    public ArrayList getExpireList(){
+        return expireOriginal;
     }
     
-    /** Devuelve el conjunto de conexiones b‡sicas T
-     *  @return Conjunto T de conexiones b‡sicas del tablero */
-    public Conexiones ObtenerT(){
-        return T;
+    /** Devuelve el conjunto de conexiones bÂ‡sicas T
+     *  @return Conjunto T de conexiones bÂ‡sicas del tablero */
+    public Connections getConnections(){
+        return connections;
     }
     
-    /** Devuelve la dimensi—n del tablero de la heur’stica
-     *  @return Dimensi—n del tablero */
-    public int ObtenerDimension(){
-        return Dimension;
+    /** Devuelve la dimensiÂ—n del tablero de la heurÂ’stica
+     *  @return DimensiÂ—n del tablero */
+    public int getDimension(){
+        return dimension;
     }
     
-    /** Devuelve una lista con las casillas libres del tablero
+    /** Devuelve una list con las casillas libres del tablero
      *  @return Lista de casillas libres */
-    public ArrayList<Casilla> ObtenerCeldasLibres(){
-        ArrayList<Casilla> lis = new ArrayList<Casilla>();
+    public ArrayList<Square> getCellsLibres(){
+        ArrayList<Square> lis = new ArrayList<Square>();
         
-        for(int i = 0; i < Dimension; i++)
-            for(int j = 0; j < Dimension; j++)
-                if(c[i][j].esVacia()) lis.add((Casilla)c[i][j]);
+        for(int i = 0; i < dimension; i++)
+            for(int j = 0; j < dimension; j++)
+                if(squares[i][j].isEmpty()) lis.add((Square)squares[i][j]);
         
         return lis;
     }
     
-    /** Devuelve la lista G asociada al tablero, conteniendo las casillas del color
-     *  que se pase por argumento o que estŽn libres
+    /** Devuelve la list G asociada al tablero, conteniendo las casillas del color
+     *  que se pase por argumento west que estÂŽn libres
      *  @param color Identificador del jugador del que se desea obtener G
      *  @return Conjunto G como ArrayList */ 
-    public ArrayList<Celda> GenerarG(int color){
-        ArrayList<Celda> G = new ArrayList<Celda>();
+    public ArrayList<Cell> generateG(int color){
+        ArrayList<Cell> G = new ArrayList<Cell>();
         if(color == 1){
-            for(int i = 0; i < Dimension; i++){
-                for(int j = 0; j < Dimension; j++){
-                    if((c[i][j].ObtenerColor() == -1) || (c[i][j].ObtenerColor() == 1)) G.add(c[i][j]);
+            for(int i = 0; i < dimension; i++){
+                for(int j = 0; j < dimension; j++){
+                    if((squares[i][j].getColor() == -1) || (squares[i][j].getColor() == 1)) G.add(squares[i][j]);
                 }
             }
-            G.add(n);
-            G.add(s);
+            G.add(north);
+            G.add(south);
         }
         else{
-            for(int i = 0; i < Dimension; i++){
-                for(int j = 0; j < Dimension; j++){
-                    if((c[j][i].ObtenerColor() == -1) || (c[j][i].ObtenerColor() == 0)) G.add(c[j][i]);
+            for(int i = 0; i < dimension; i++){
+                for(int j = 0; j < dimension; j++){
+                    if((squares[j][i].getColor() == -1) || (squares[j][i].getColor() == 0)) G.add(squares[j][i]);
                 }
             }
-            G.add(e);
-            G.add(o);
+            G.add(east);
+            G.add(west);
         }
 
         return G;
     }
     
-    /** Devuelve la casilla situada en la fila y columna que se pasen como argumento
-     *  @param fila Fila de la casilla
-     *  @param columna Columna de la casilla
-     *  @return Una referencia a la casilla indicada por esa fila y esa columna */
-    public Casilla Obtener(int fila, int columna){
-        return c[fila][columna];
+    /** Devuelve la casilla situada en la row y column que se pasen como argumento
+     *  @param row Fila de la casilla
+     *  @param column Columna de la casilla
+     *  @return Una referencia a la casilla indicada por esa row y esa column */
+    public Square get(int row, int column){
+        return squares[row][column];
     }
     
-    /** Determina si dos celdas son vecinas atendiendo a la posici—n en el tablero
+    /** Determina si dos celdas son vecinas atendiendo a la posiciÂ—n en el tablero
      *  @param a Primera casilla
      *  @param b Segunda casilla
      *  @return Verdadero si son vecinas, falso en caso contrario
-     *  @throws CasillaInexistente  Si la casilla objetivo esta fuera del rango del tablero */   
-    private boolean SonVecinas(Celda a, Celda b) throws CasillaInexistente{
-        if((a instanceof Casilla) && (b instanceof Casilla))
-            return SonVecinas(((Casilla)a).ObtenerFila(), ((Casilla)a).ObtenerColumna(), ((Casilla)b).ObtenerFila(), ((Casilla)b).ObtenerColumna());
+     *  @throws NonexistentSquare  Si la casilla objetivo esta fuera del rango del tablero */   
+    private boolean areNeighbors(Cell a, Cell b) throws NonexistentSquare{
+        if((a instanceof Square) && (b instanceof Square))
+            return areNeighbors(((Square)a).getRow(), ((Square)a).getColumn(), ((Square)b).getRow(), ((Square)b).getColumn());
         return false;
     }
     
     /** Determina si dos celdas cuyas coordenadas se pase son vecinas atendiendo
-     *  a la posici—n en el tablero.
-     *  @param f1 Fila de la primera casilla
-     *  @param c1 Columna de la primera casilla
-     *  @param f2 Fila de la segunda casilla
-     *  @param c2 Columna de la segunda casilla
+     *  a la posiciÂ—n en el tablero.
+     *  @param row1 Fila de la primera casilla
+     *  @param col1 Columna de la primera casilla
+     *  @param row2 Fila de la segunda casilla
+     *  @param col2 Columna de la segunda casilla
      *  @return Verdadero si son vecinas, falso en caso contrario
-     *  @throws CasillaInexistente  Si la casilla objetivo esta fuera del rango del tablero */   
-    private boolean SonVecinas(int f1, int c1, int f2, int c2) throws CasillaInexistente{
-        if((f1 >= Dimension) || (c1 >= Dimension) || (c1 < 0) || (f1 < 0) || (f2 >= Dimension) || (c2 >= Dimension) || (c2 < 0) || (f2 < 0))
-            throw new CasillaInexistente();
+     *  @throws NonexistentSquare  Si la casilla objetivo esta fuera del rango del tablero */   
+    private boolean areNeighbors(int row1, int col1, int row2, int col2) throws NonexistentSquare{
+        if((row1 >= dimension) || (col1 >= dimension) || (col1 < 0) || (row1 < 0) || (row2 >= dimension) || (col2 >= dimension) || (col2 < 0) || (row2 < 0))
+            throw new NonexistentSquare();
 
-        Celda [] lista;
-        Celda b = c[f2][c2];
+        Cell [] list;
+        Cell target = squares[row2][col2];
         
-        if((c1 == 0) && (f1 != 0) && (f1 != Dimension-1)){
-            lista = new Celda[4];
-            lista[0]=c[f1][c1+1];
-            lista[1]=c[f1+1][c1+1];
-            lista[2]=c[f1-1][c1];
-            lista[3]=c[f1+1][c1];
+        if((col1 == 0) && (row1 != 0) && (row1 != dimension-1)){
+            list = new Cell[4];
+            list[0]=squares[row1][col1+1];
+            list[1]=squares[row1+1][col1+1];
+            list[2]=squares[row1-1][col1];
+            list[3]=squares[row1+1][col1];
         }
-        else if((c1 == Dimension-1) && (f1 != 0) && (f1 != Dimension-1)){
-            lista = new Celda[4];
-            lista[0]=c[f1][c1-1];
-            lista[1]=c[f1-1][c1-1];
-            lista[2]=c[f1-1][c1];
-            lista[3]=c[f1+1][c1];
+        else if((col1 == dimension-1) && (row1 != 0) && (row1 != dimension-1)){
+            list = new Cell[4];
+            list[0]=squares[row1][col1-1];
+            list[1]=squares[row1-1][col1-1];
+            list[2]=squares[row1-1][col1];
+            list[3]=squares[row1+1][col1];
         }
-        else if((f1 == 0) && (c1 != 0) && (c1 != Dimension-1)){
-            lista = new Celda[4];
-            lista[0]=c[f1+1][c1];
-            lista[1]=c[f1+1][c1+1];
-            lista[2]=c[f1][c1+1];
-            lista[3]=c[f1][c1-1];
+        else if((row1 == 0) && (col1 != 0) && (col1 != dimension-1)){
+            list = new Cell[4];
+            list[0]=squares[row1+1][col1];
+            list[1]=squares[row1+1][col1+1];
+            list[2]=squares[row1][col1+1];
+            list[3]=squares[row1][col1-1];
         }
-        else if((f1 == Dimension-1) && (c1 != 0) && (c1 != Dimension-1)){
-            lista = new Celda[4];
-            lista[0]=c[f1][c1-1];
-            lista[1]=c[f1][c1+1];
-            lista[2]=c[f1-1][c1-1];
-            lista[3]=c[f1-1][c1];
+        else if((row1 == dimension-1) && (col1 != 0) && (col1 != dimension-1)){
+            list = new Cell[4];
+            list[0]=squares[row1][col1-1];
+            list[1]=squares[row1][col1+1];
+            list[2]=squares[row1-1][col1-1];
+            list[3]=squares[row1-1][col1];
         }
-        else if((c1 == 0) && (f1 == 0)){
-            lista = new Celda[3];
-            lista[0]=c[f1][c1+1];
-            lista[1]=c[f1+1][c1];
-            lista[2]=c[f1+1][c1+1];
+        else if((col1 == 0) && (row1 == 0)){
+            list = new Cell[3];
+            list[0]=squares[row1][col1+1];
+            list[1]=squares[row1+1][col1];
+            list[2]=squares[row1+1][col1+1];
         }
-        else if((c1 == 0) && (f1 == Dimension-1)){
-            lista = new Celda[2];
-            lista[0]=c[f1][c1+1];
-            lista[1]=c[f1-1][c1];
+        else if((col1 == 0) && (row1 == dimension-1)){
+            list = new Cell[2];
+            list[0]=squares[row1][col1+1];
+            list[1]=squares[row1-1][col1];
         }
-        else if((c1 == Dimension-1) && (f1 == Dimension-1)){
-            lista = new Celda[3];
-            lista[0]=c[f1][c1-1];
-            lista[1]=c[f1-1][c1];
-            lista[2]=c[f1-1][c1-1];
+        else if((col1 == dimension-1) && (row1 == dimension-1)){
+            list = new Cell[3];
+            list[0]=squares[row1][col1-1];
+            list[1]=squares[row1-1][col1];
+            list[2]=squares[row1-1][col1-1];
         }
-        else if((c1 == Dimension-1) && (f1 == 0)){
-            lista = new Celda[2];
-            lista[0]=c[f1][c1-1];
-            lista[1]=c[f1+1][c1];				
+        else if((col1 == dimension-1) && (row1 == 0)){
+            list = new Cell[2];
+            list[0]=squares[row1][col1-1];
+            list[1]=squares[row1+1][col1];				
         }
         else{
-            lista = new Celda[6];
-            lista[0]=c[f1-1][c1-1];
-            lista[1]=c[f1-1][c1];
-            lista[2]=c[f1][c1-1];
-            lista[3]=c[f1][c1+1];
-            lista[4]=c[f1+1][c1];
-            lista[5]=c[f1+1][c1+1];
+            list = new Cell[6];
+            list[0]=squares[row1-1][col1-1];
+            list[1]=squares[row1-1][col1];
+            list[2]=squares[row1][col1-1];
+            list[3]=squares[row1][col1+1];
+            list[4]=squares[row1+1][col1];
+            list[5]=squares[row1+1][col1+1];
         }
-        for(int i = 0; i < lista.length; i++)
-            if(lista[i] == b) return true;
+        for(int i = 0; i < list.length; i++)
+            if(list[i] == target) return true;
         
         return false;
     }
