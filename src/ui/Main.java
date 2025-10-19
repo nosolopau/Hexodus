@@ -270,8 +270,8 @@ class GameWindow extends JFrame{
         
         text = new JLabel();
         statusBar.add(text);
-        red = new ImageIcon(ClassLoader.getSystemResource("images/rojo.png"));
-        blue = new ImageIcon(ClassLoader.getSystemResource("images/azul.png"));
+        red = new ImageIcon(ClassLoader.getSystemResource("images/red.png"));
+        blue = new ImageIcon(ClassLoader.getSystemResource("images/blue.png"));
         suggestion = new ImageIcon(ClassLoader.getSystemResource("images/sug.png"));
 
         b = new JButton [Dimension][Dimension];
