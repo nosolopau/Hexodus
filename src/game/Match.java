@@ -1,11 +1,3 @@
-/*
- * Hexodus >> Match.java
- *
- * Created on June 21, 2006 at 18:39
- *
- * Copyright (C) 2006 - 2008 Pablo Torrecilla. GNU General Public License.
- */
-
 package game;
 import heuristics.Factory;
 import heuristics.Heuristic;

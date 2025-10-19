@@ -1,11 +1,3 @@
-/*
- * Hexodus >> Heuristic.java
- *
- * Created on November 25, 2006 at 23:08
- *
- * Copyright (C) 2006 - 2008 Pablo Torrecilla. GNU General Public License
- */
-
 package heuristics;
 import java.util.*;
 

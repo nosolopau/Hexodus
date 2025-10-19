@@ -1,11 +1,3 @@
-/*
- * Hexodus >> NonexistentSquare.java
- *
- * Created on June 14, 2007 at 03:50
- *
- * Copyright (C) 2006 - 2008 Pablo Torrecilla. GNU General Public License
- */
-
 package game;
 
 /**

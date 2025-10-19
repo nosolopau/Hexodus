@@ -1,11 +1,3 @@
-/*
- * Hexodus >> Move.java
- *
- * Created on June 24, 2006 at 16:11
- *
- * Copyright (C) 2006 - 2008 Pablo Torrecilla. GNU General Public License.
- */
-
 package game;
 
 /** Represents each move that composes a match.

@@ -1,11 +1,3 @@
-/*
- * Hexodus >> Connections.java
- *
- * Created on November 25, 2006 at 16:33
- *
- * Copyright (C) 2006 - 2008 Pablo Torrecilla. GNU General Public License
- */
-
 package heuristics;
 import java.util.*;
 

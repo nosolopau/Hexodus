@@ -1,11 +1,3 @@
-/*
- * Hexodus >> Matrix.java
- *
- * Created on February 25, 2007 at 17:33
- *
- * Copyright (C) 2006 - 2008 Pablo Torrecilla. GNU General Public License
- */
-
 package heuristics;
 
 import java.util.*;

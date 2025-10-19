@@ -1,11 +1,3 @@
-/*
- * Hexodus >> Simulation.java
- *
- * Created on March 29, 2007 at 15:50
- *
- * Copyright (C) 2006 - 2008 Pablo Torrecilla. GNU General Public License
- */
-
 package heuristics;
 import java.util.*;
 

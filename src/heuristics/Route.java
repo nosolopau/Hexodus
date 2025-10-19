@@ -1,11 +1,3 @@
-/*
- * Hexodus >> Route.java
- *
- * Created on January 17, 2007 at 9:54
- *
- * Copyright (C) 2006 - 2008 Pablo Torrecilla. GNU General Public License
- */
-
 package heuristics;
 import java.util.*;
 

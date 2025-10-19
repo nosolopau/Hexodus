@@ -1,11 +1,3 @@
-/*
- * Board.java
- *
- * Created on April 23, 2007 at 16:01
- *
- * Copyright (C) 2006 - 2008 Pablo Torrecilla. GNU General Public License
- */
-
 package heuristics;
 import java.util.*;
 

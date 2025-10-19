@@ -1,11 +1,3 @@
-/*
- * Hexodus >> Player.java
- *
- * Created on June 21, 2006 at 18:50
- *
- * Copyright (C) 2006 - 2008 Pablo Torrecilla. GNU General Public License
- */
-
 package game;
 
 /** Represents a player in the match

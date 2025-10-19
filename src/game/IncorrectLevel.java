@@ -1,11 +1,3 @@
-/*
- * Hexodus >> IncorrectLevel.java
- *
- * Created on June 14, 2007 at 10:27
- *
- * Copyright (C) 2006 - 2008 Pablo Torrecilla. GNU General Public License
- */
-
 package game;
 
 /**
