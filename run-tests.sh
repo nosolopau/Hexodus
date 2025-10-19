@@ -14,7 +14,8 @@ if [ $? -eq 0 ]; then
       org.junit.runner.JUnitCore \
       game.BoardTest \
       heuristics.MatrixTest \
-      heuristics.PathTest
+      heuristics.PathTest \
+      heuristics.HeuristicTest
 else
     echo "✗ Compilation failed!"
     exit 1
