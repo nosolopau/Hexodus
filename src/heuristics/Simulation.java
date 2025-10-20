@@ -257,25 +257,25 @@ public class Simulation {
         m.put(c, neighbors);
     }
     
-    /** Calculates the valid combinations between the elements of the set G, 
+    /** Calculates the valid combinations between the elements of the set G,
      *  called g, g1 and g2. Keeps g fixed and varies g1 and g2 over it: */
     private double calculateResistance(int color) throws NonexistentSquare{
-        int profundidad = 100;
-        
+        int maxDepth = 100;
+
         /* Creates a list to contain the paths that should expire in the
          * first search iteration */
         ArrayList expireOriginal = board.getExpireList();
-        
+
         // A series of structures to implement path expiration:
-        ArrayList Caducar = new ArrayList(); // Paths that will expire in an iteration
+        ArrayList expiring = new ArrayList(); // Paths that will expire in an iteration
         renew = new ArrayList(); // Paths that have aged and must be restored upon completion
-        ArrayList nextsCaducar = new ArrayList();  // Squares that will expire next iteration
-        
-        Caducar = (ArrayList) expireOriginal.clone();  // Copy to Caducar the paths that will expire in the second iteration
+        ArrayList nextExpiring = new ArrayList();  // Squares that will expire next iteration
+
+        expiring = (ArrayList) expireOriginal.clone();  // Copy to expiring the paths that will expire in the second iteration
 
         G[color] = board.generateG(color);
-        int NumeroNodos = G[color].size();
-        Cell[] ArrayG = (Cell []) G[color].toArray(new Cell [NumeroNodos]);
+        int numNodes = G[color].size();
+        Cell[] ArrayG = (Cell []) G[color].toArray(new Cell [numNodes]);
         
         Connections SubC = C[color];
         Connections SubSC = SC[color];
@@ -294,18 +294,18 @@ public class Simulation {
         
         // Variables for connection search
         newsConnections = true;
-        int iteraciones = 0;
+        int iterations = 0;
 
-        while(newsConnections && (iteraciones < profundidad)){
+        while(newsConnections && (iterations < maxDepth)){
             newsConnections = false;
-            iteraciones++;
-            for(g = 0; g < NumeroNodos; g++){
+            iterations++;
+            for(g = 0; g < numNodes; g++){
                 cg = ArrayG[g];
-                for(g1 = 0; g1 < NumeroNodos; g1++){
+                for(g1 = 0; g1 < numNodes; g1++){
                     if(g1 != g){
                         cg1 = ArrayG[g1];
                         if((!(cg.getColor() == color)) || (cg1.isEmpty())){
-                            for(g2 = g1 + 1; g2 < NumeroNodos; g2++){
+                            for(g2 = g1 + 1; g2 < numNodes; g2++){
                                 if(g2 != g){
                                     cg2 = ArrayG[g2];
                                     if((!(cg.getColor() == color)) || (cg2.isEmpty())){
@@ -334,8 +334,8 @@ public class Simulation {
                                                     Path c2 = (Path) ic2.next();
                                                     if(c1.hasEmptyIntersection(c2) && !c2.contains(cg1) && !c1.contains(cg2)){
                                                         if(c1.isNew() || c2.isNew()){
-                                                            nextsCaducar.add(c1);
-                                                            nextsCaducar.add(c2);
+                                                            nextExpiring.add(c1);
+                                                            nextExpiring.add(c2);
                                                             
                                                             // Apply the AND rule by studying the color of the target square:
                                                             if(cg.getColor() == color){
@@ -387,69 +387,69 @@ public class Simulation {
             
             /* Marks as old the paths used in the previous iteration
              * and prepares those used in the current one to expire in the next */
-            Iterator cad = Caducar.iterator();
+            Iterator cad = expiring.iterator();
             while(cad.hasNext()){
                 Path mod = (Path)cad.next();
                 mod.changeNew(false);
                 renew.add(mod);
             }
-            Caducar.clear();
-            Caducar = (ArrayList) nextsCaducar.clone();
-            nextsCaducar.clear();
+            expiring.clear();
+            expiring = (ArrayList) nextExpiring.clone();
+            nextExpiring.clear();
         }
 
-        HashSet<Cell> Visitados = new HashSet<Cell>();      // Creates a set for visited nodes (O(1) contains)
+        HashSet<Cell> Visited = new HashSet<Cell>();      // Creates a set for visited nodes (O(1) contains)
 
-        char superior;
-        char tierra;
-        
+        char sourceBorder;
+        char ground;
+
         if(color == 1){
-            superior = 'N';
-            tierra = 'S';
+            sourceBorder = 'N';
+            ground = 'S';
         }
         else{
-            superior = 'E';
-            tierra = 'W';
+            sourceBorder = 'E';
+            ground = 'W';
         }
 
         double M[][];   // A temporary conductance matrix
         double N[][];   // Final conductance matrix
         double B[];     // The column matrix of independent terms of the equation
-        int conectado = -1;
+        int sourceIndex = -1;
 
-        M = new double [NumeroNodos][NumeroNodos];
-        N = new double [NumeroNodos-1][NumeroNodos-1];
-        B = new double [NumeroNodos-1];
-        
-        int Intensidad = 1; // Intensity transmitted by the current source
+        M = new double [numNodes][numNodes];
+        N = new double [numNodes-1][numNodes-1];
+        B = new double [numNodes-1];
+
+        int Current = 1; // Intensity transmitted by the current source
         int n = 0;          // Index in G of current element
-        int quitar = -1;    // Index of the node considered ground    
+        int removeIndex = -1;    // Index of the node considered ground    
                     
         /* Traverses the elements of G adding the conductance to the matrix according to
          * whether connection exists. Notes the index of the ground-connected node to eliminate it
          * and writes the intensity in the node connected to the source. */
-        for(int i=0; i<NumeroNodos; i++){
+        for(int i=0; i<numNodes; i++){
             Cell c1 = ArrayG[i];
 
             if(c1 instanceof Border){
-                if(((Border)c1).getName() == tierra)
-                    quitar = n;
-                else if(((Border)c1).getName() == superior){
-                    B[n] = Intensidad; // If it is the node connected to the source, mark a 1 in the intensity matrix   
-                    conectado = n;
+                if(((Border)c1).getName() == ground)
+                    removeIndex = n;
+                else if(((Border)c1).getName() == sourceBorder){
+                    B[n] = Current; // If it is the node connected to the source, mark a 1 in the intensity matrix
+                    sourceIndex = n;
                 }
             }
 
             /* Marks the current node as visited to not return. This can
              * be done because the matrix is symmetric: */
-            Visitados.add(c1);
+            Visited.add(c1);
             
             Iterator it2 = G[color].iterator(); // Gets an iterator of the nodes
             int m = 0;  // Index in G of current element
             while(it2.hasNext()){
                 Cell c2 = (Cell) it2.next();
-                if(!Visitados.contains(c2)){
-                    /* If the elements are connected, inserts into the matrix 
+                if(!Visited.contains(c2)){
+                    /* If the elements are connected, inserts into the matrix
                      * the conductance between them. If they are not, inserts 0 */
                     if(SubC.hasConnectionEx(c1, c2)){
                         M[n][m] = M[m][n] = -1 / (double) (c1.getResistance(color) + c2.getResistance(color));
@@ -467,14 +467,14 @@ public class Simulation {
         double ac; // Accumulator of the sum of conductances of each row
         int a = 0;
         int i = 0;
-        while(i < NumeroNodos){
+        while(i < numNodes){
             ac = 0;
             int j = 0;
             int b = 0;
-            if(i != quitar){
-                while(j < NumeroNodos){
+            if(i != removeIndex){
+                while(j < numNodes){
                     if(j != i){
-                        if(j != quitar){
+                        if(j != removeIndex){
                             N[a][b] = M[i][j];
                             b++;
                         }
@@ -489,10 +489,10 @@ public class Simulation {
             i++;
         }
         Matrix m = new Matrix(N);
-        double c[] = new double[NumeroNodos-1];
+        double c[] = new double[numNodes-1];
         c = m.solve(B, true);
-        
-        return c[conectado];
+
+        return c[sourceIndex];
     }
     
     /** Recursive function that applies the OR rule on a route created by applying

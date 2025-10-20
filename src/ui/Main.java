@@ -208,8 +208,8 @@ class GameWindow extends JFrame{
     
     /** Creates a new game window
      *  @param dim      Board dimension of the new game
-     *  @param tipoV    Type of the vertical player
-     *  @param tipoH    Type of the horizontal player
+     *  @param typeV    Type of the vertical player
+     *  @param typeH    Type of the horizontal player
      *  @param swap     True if the swap rule is enabled, false otherwise */
     public GameWindow(int dimension, int tipoVertical, int tipoHorizontal, boolean swap){
         Dimension = dimension;
@@ -221,11 +221,11 @@ class GameWindow extends JFrame{
     
     /** Creates a new game
      *  @param dim      Board dimension of the new game
-     *  @param tipoV    Type of the vertical player
-     *  @param tipoH    Type of the horizontal player
+     *  @param typeV    Type of the vertical player
+     *  @param typeH    Type of the horizontal player
      *  @param swap     True if the swap rule is enabled, false otherwise
      *  @param difficulty Difficulty level (1 = Normal, 2 = Expert, 3 = Master) */
-    public void newGame(int dim, int tipoV, int tipoH, boolean swap, int difficulty){
+    public void newGame(int dim, int typeV, int typeH, boolean swap, int difficulty){
         Dimension = dim;
         
         int width, height;
@@ -339,8 +339,8 @@ class GameWindow extends JFrame{
         setJMenuBar(statusBarMenu);
         setVisible(true);
         
-        uno = new Player(tipoV, 1);
-        dos = new Player(tipoH, 0);
+        uno = new Player(typeV, 1);
+        dos = new Player(typeH, 0);
 
         p = new Match(dim, swap);
 
@@ -359,7 +359,7 @@ class GameWindow extends JFrame{
         ic_turn = red;  
         turn = uno;
         
-        if((tipoV == 1) && (tipoH == 1)){
+        if((typeV == 1) && (typeH == 1)){
             demo();
         }
         else if(turn.getType() == 1){ // If the starting player is the computer
@@ -604,9 +604,9 @@ class GameWindow extends JFrame{
         private int index;
         private int parent;
         
-        public MenuHandler(int padre, int indice){
-            index = indice;
-            parent = padre;
+        public MenuHandler(int parentId, int indexId){
+            index = indexId;
+            parent = parentId;
         }
         
         public void actionPerformed(ActionEvent e){
@@ -684,8 +684,8 @@ class GameWindow extends JFrame{
             return allowed;
         }
         
-        public void setAllowed(boolean permitido){
-            allowed = permitido;
+        public void setAllowed(boolean isAllowed){
+            allowed = isAllowed;
         }
     }
     
@@ -695,9 +695,9 @@ class GameWindow extends JFrame{
             super(column, row);
         }
         
-        public CellHandlerNormal(int column, int row, boolean permitido){ 
+        public CellHandlerNormal(int column, int row, boolean isAllowed){
             super(column, row);
-            allowed = permitido;
+            allowed = isAllowed;
         }
  
         public void actionPerformed(ActionEvent e){
