@@ -536,18 +536,18 @@ public class Simulation {
         return false;
     }
    
-    /** Traverses the board and shows the pairs of squares and borders between which there is 
+    /** Traverses the board and shows the pairs of squares and borders between which there is
      *  an established connection.
-     *  @param  mostrar Allows configuring the list: 1 = only CV, 2 = only SCV, 3 = only connections.
-     *  @return Returns the average connections per endpoint (float) */ 
-   public float MostrarConnectionsEx(int color, int mostrar){
+     *  @param  displayMode Allows configuring the list: 1 = only CV, 2 = only SCV, 3 = only connections.
+     *  @return Returns the average connections per endpoint (float) */
+   public float displayConnectionsEx(int color, int displayMode){
         Connections ob = null;
         Iterator it1 = G[color].iterator();
         float total = 0, tmp = 0;
-        int numero = 0;
+        int count = 0;
         Route r = null;
-        
-        switch(mostrar){
+
+        switch(displayMode){
             case 1:
                 ob = C[color];
                 break;
@@ -566,25 +566,25 @@ public class Simulation {
                         r = ob.getRoute(c1, c2);
                         tmp = r.getLength();
                         total = total + tmp;
-                        numero++;
+                        count++;
                         if(r != null) System.out.println("(" +  c1 + ", " + r + " , " + c2 + ") - " + (int)tmp);
                     }
                 }
             }
         }
-        return ((float) (total / numero));
+        return ((float) (total / count));
     }
     
-    /** Traverses the board and shows the pairs of squares and borders between which there is 
+    /** Traverses the board and shows the pairs of squares and borders between which there is
      *  an established connection.
-     *  @param mostrar Allows configuring the list: 1 = only CV, 2 = only SCV, 3 = only connections. */ 
-    public void MostrarConnectionsMinimas(int color, int mostrar){
+     *  @param displayMode Allows configuring the list: 1 = only CV, 2 = only SCV, 3 = only connections. */
+    public void displayMinimalConnections(int color, int displayMode){
         Connections ob = null;
         Iterator it1 = G[color].iterator();
-        int numero = 0;
+        int count = 0;
         Route r = null;
-        
-        switch(mostrar){
+
+        switch(displayMode){
             case 1:
                 ob = C[color];
                 break;
@@ -598,10 +598,10 @@ public class Simulation {
             Cell c1 = (Cell) it1.next();
             while(it2.hasNext()){
                 Cell c2 = (Cell) it2.next();
-                if(c2 != c1){  
+                if(c2 != c1){
                     if(ob.hasConnection(c1, c2)){
                         r = ob.getRoute(c1, c2);
-                        numero++;
+                        count++;
                         if(r != null) System.out.println("(" +  c1 + ", " + r.getMinimumPath() + " , " + c2 + ")");
                     }
                 }
