@@ -26,10 +26,10 @@ public class Main{
     /** Starts the program execution
      *  @param args Command line arguments */
     public static void main(String[] args){        
-        GameWindow juego = new GameWindow(6, 0, 1, true);
+        GameWindow game = new GameWindow(6, 0, 1, true);
 
         WindowCloseHandler window = new WindowCloseHandler();
-        juego.addWindowListener(window);
+        game.addWindowListener(window);
     }
 }
 
@@ -39,7 +39,7 @@ class OptionsDialog extends JDialog{
     private JComboBox selDimension;
     private JComboBox selDifficulty;
     private JCheckBox activarSwap;
-    private GameWindow juego;
+    private GameWindow game;
 
     /** Shows the dialog to create a new match
      *  @param principal    Reference to the main game window */
@@ -48,7 +48,7 @@ class OptionsDialog extends JDialog{
         setSize(300, 380);
         setResizable(false);
         
-        juego = principal;
+        game = principal;
         
         Container panel = getContentPane();
         panel.setLayout(null);
@@ -138,7 +138,7 @@ class OptionsDialog extends JDialog{
             difficulty = selDifficulty.getSelectedIndex() + 1;
 
             dispose();
-            juego.newGame(dim, v, h, activarSwap.isSelected(), difficulty);
+            game.newGame(dim, v, h, activarSwap.isSelected(), difficulty);
         }
     }
 }
@@ -157,14 +157,14 @@ class AboutDialog extends JDialog{
         opciones.setBounds(10, 10, 280, 280);
         panel.add(opciones);
         opciones.setLayout(new FlowLayout());
-        JLabel titulo = new JLabel("<html><br><br><center><font size=+4>" + 
+        JLabel title = new JLabel("<html><br><br><center><font size=+4>" + 
                 "<b>Hexodus</b></font><br>versin 1.0</center>");
 
         JLabel text = new JLabel("<html><br><center>Copyright © 2006 - 2008 " + 
                 "Pablo Torrecilla<br>GNU General Public License." + "<br><br>" +
                 "pau@nosololinux.com</center>");
 
-        opciones.add(titulo);
+        opciones.add(title);
         opciones.add(text);
         
         JButton Ok = new JButton();        
@@ -197,8 +197,8 @@ class GameWindow extends JFrame{
     private JButton swap;
     
     private Player turn;
-    private Player uno;
-    private Player dos;
+    private Player playerOne;
+    private Player playerTwo;
     private Match p;
     private int suggested[];
     private int Dimension;
@@ -308,27 +308,27 @@ class GameWindow extends JFrame{
         }
         
         menus = new JMenu[] {new JMenu("Game"), new JMenu("Hexodus"), new JMenu("Help")};
-        JMenuItem[] juego = {new JMenuItem("New Game...")};
+        JMenuItem[] gameMenu = {new JMenuItem("New Game...")};
         JMenuItem[] hexodus = {new JMenuItem("Suggest Move"), new JRadioButtonMenuItem("Normal Mode"), new JRadioButtonMenuItem("Expert Mode"), new JRadioButtonMenuItem("Master Mode")};
-        JMenuItem[] ayuda = {new JMenuItem("About...")};
+        JMenuItem[] helpMenu = {new JMenuItem("About...")};
 
-        ButtonGroup nivel = new ButtonGroup();
-        nivel.add(hexodus[1]);
-        nivel.add(hexodus[2]);
-        nivel.add(hexodus[3]);
+        ButtonGroup difficultyGroup = new ButtonGroup();
+        difficultyGroup.add(hexodus[1]);
+        difficultyGroup.add(hexodus[2]);
+        difficultyGroup.add(hexodus[3]);
         
-        for(int i = 0; i < juego.length; i++){
-            menus[0].add(juego[i]);
-            juego[i].addActionListener(new MenuHandler(0, i));
+        for(int i = 0; i < gameMenu.length; i++){
+            menus[0].add(gameMenu[i]);
+            gameMenu[i].addActionListener(new MenuHandler(0, i));
         }
         for(int i = 0; i < hexodus.length; i++){
             menus[1].add(hexodus[i]);
             if(i == 0)menus[1].add(new JSeparator());
             hexodus[i].addActionListener(new MenuHandler(1, i));
         }
-        for(int i = 0; i < ayuda.length; i++){
-            menus[2].add(ayuda[i]);
-            ayuda[i].addActionListener(new MenuHandler(2, i));
+        for(int i = 0; i < helpMenu.length; i++){
+            menus[2].add(helpMenu[i]);
+            helpMenu[i].addActionListener(new MenuHandler(2, i));
         }
         JMenuBar statusBarMenu = new JMenuBar();
         for(int i = 0; i < menus.length; i++){
@@ -339,8 +339,8 @@ class GameWindow extends JFrame{
         setJMenuBar(statusBarMenu);
         setVisible(true);
         
-        uno = new Player(typeV, 1);
-        dos = new Player(typeH, 0);
+        playerOne = new Player(typeV, 1);
+        playerTwo = new Player(typeH, 0);
 
         p = new Match(dim, swap);
 
@@ -357,7 +357,7 @@ class GameWindow extends JFrame{
         else repaint();
                 
         ic_turn = red;  
-        turn = uno;
+        turn = playerOne;
         
         if((typeV == 1) && (typeH == 1)){
             demo();
@@ -496,16 +496,16 @@ class GameWindow extends JFrame{
     
     /** Exchanges the turn between both players */
     public void changeTurn(){
-        if(turn == uno) turn = dos;
-        else turn = uno;
+        if(turn == playerOne) turn = playerTwo;
+        else turn = playerOne;
         if(ic_turn == blue) ic_turn = red;
         else ic_turn = blue;
     }
     
     /** Returns the next player to have the turn */
     public Player ObtenernextTurno(){
-        if(turn == uno) return dos;
-        else return uno;
+        if(turn == playerOne) return playerTwo;
+        else return playerOne;
     }
     
     /** Updates the interface when the current match ends, showing the
