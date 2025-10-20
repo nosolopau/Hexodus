@@ -38,7 +38,7 @@ class OptionsDialog extends JDialog{
     private JRadioButton v1, v2, h1, h2;    // References to the controls
     private JComboBox selDimension;
     private JComboBox selDifficulty;
-    private JCheckBox activarSwap;
+    private JCheckBox enableSwap;
     private GameWindow game;
 
     /** Shows the dialog to create a new match
@@ -53,16 +53,16 @@ class OptionsDialog extends JDialog{
         Container panel = getContentPane();
         panel.setLayout(null);
         
-        JPanel opciones = new JPanel();
+        JPanel options = new JPanel();
         JPanel vertical = new JPanel();
         JPanel horizontal = new JPanel();
-        opciones.setBorder(new TitledBorder("Game Options"));
+        options.setBorder(new TitledBorder("Game Options"));
         vertical.setBorder(new TitledBorder("Player 1 (vertical)"));
         horizontal.setBorder(new TitledBorder("Player 2 (horizontal)"));
-        opciones.setBounds(10, 10, 280, 130);
+        options.setBounds(10, 10, 280, 130);
         vertical.setBounds(10, 150, 280, 80);
         horizontal.setBounds(10, 240, 280, 80);
-        panel.add(opciones);
+        panel.add(options);
         panel.add(vertical);
         panel.add(horizontal);
 
@@ -95,16 +95,16 @@ class OptionsDialog extends JDialog{
         selDifficulty.addItem("Expert Mode (Level 2)");
         selDifficulty.addItem("Master Mode (Level 3)");
 
-        JLabel etiDimension = new JLabel("Dimension: ");
-        JLabel etiDifficulty = new JLabel("Difficulty: ");
-        activarSwap = new JCheckBox("Enable swap rule");
-        activarSwap.setSelected(true);
+        JLabel lblDimension = new JLabel("Dimension: ");
+        JLabel lblDifficulty = new JLabel("Difficulty: ");
+        enableSwap = new JCheckBox("Enable swap rule");
+        enableSwap.setSelected(true);
 
-        opciones.add(etiDimension);
-        opciones.add(selDimension);
-        opciones.add(etiDifficulty);
-        opciones.add(selDifficulty);
-        opciones.add(activarSwap);
+        options.add(lblDimension);
+        options.add(selDimension);
+        options.add(lblDifficulty);
+        options.add(selDifficulty);
+        options.add(enableSwap);
         vertical.add(v1); 
         vertical.add(v2);
         horizontal.add(h1);
@@ -138,7 +138,7 @@ class OptionsDialog extends JDialog{
             difficulty = selDifficulty.getSelectedIndex() + 1;
 
             dispose();
-            game.newGame(dim, v, h, activarSwap.isSelected(), difficulty);
+            game.newGame(dim, v, h, enableSwap.isSelected(), difficulty);
         }
     }
 }
@@ -153,10 +153,10 @@ class AboutDialog extends JDialog{
         Container panel = getContentPane();
         panel.setLayout(null);
         
-        JPanel opciones = new JPanel(); 
-        opciones.setBounds(10, 10, 280, 280);
-        panel.add(opciones);
-        opciones.setLayout(new FlowLayout());
+        JPanel options = new JPanel(); 
+        options.setBounds(10, 10, 280, 280);
+        panel.add(options);
+        options.setLayout(new FlowLayout());
         JLabel title = new JLabel("<html><br><br><center><font size=+4>" + 
                 "<b>Hexodus</b></font><br>versin 1.0</center>");
 
@@ -164,8 +164,8 @@ class AboutDialog extends JDialog{
                 "Pablo Torrecilla<br>GNU General Public License." + "<br><br>" +
                 "pau@nosololinux.com</center>");
 
-        opciones.add(title);
-        opciones.add(text);
+        options.add(title);
+        options.add(text);
         
         JButton Ok = new JButton();        
         Ok.addActionListener(new AcceptHandler());
@@ -503,7 +503,7 @@ class GameWindow extends JFrame{
     }
     
     /** Returns the next player to have the turn */
-    public Player ObtenernextTurno(){
+    public Player getNextTurn(){
         if(turn == playerOne) return playerTwo;
         else return playerOne;
     }
@@ -760,7 +760,7 @@ class GameWindow extends JFrame{
                     firstMove = false;
                     
                     // If the opponent is the computer, ask if it swaps
-                    if(ObtenernextTurno().isComputer()) {  
+                    if(getNextTurn().isComputer()) {  
                         if(p.offerSwap(f, c)){ // The computer accepts the swap
                             Graphics gf = getGraphics();
                             if (gf != null) paintComponents(gf);
