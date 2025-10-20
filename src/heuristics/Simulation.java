@@ -116,9 +116,9 @@ public class Simulation {
                         }
                         else{
                             Elim.add(vec2);     
-                            add.add(vec2);  // No puede agregarse directamente (ver abajo)
+                            add.add(vec2);  // Cannot be added directly (see below)
                         }
-                        connections.removeConnection(vec2, vec);  // Estas operaciones pueden aadirse a Board tal cual y llamarlas desde aqu
+                        connections.removeConnection(vec2, vec);  // These operations can be added to Board as is and called from here
                         remove.add(vec2);
                     }
                 }
@@ -147,7 +147,7 @@ public class Simulation {
         Iterator ita = add.iterator();
         while(ita.hasNext()){
             Cell newNeighbor = (Cell)ita.next();
-            if(target != newNeighbor){    // A cell cannot be neighbor of s misma
+            if(target != newNeighbor){    // A cell cannot be neighbor of itself
                 
                 target.addNeighbor(newNeighbor);
                 newNeighbor.addNeighbor(target);
@@ -282,7 +282,7 @@ public class Simulation {
         
         SubC = connections.clone();
 
-        // Evita que los ndices tengan que volver a definirse en cada iteracin
+        // Prevents indices from having to be redefined in each iteration
         int g1;
         int g2;
         int g;
