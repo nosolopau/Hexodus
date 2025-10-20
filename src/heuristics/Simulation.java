@@ -397,7 +397,7 @@ public class Simulation {
             Caducar = (ArrayList) nextsCaducar.clone();
             nextsCaducar.clear();
         }
-        
+
         HashSet<Cell> Visitados = new HashSet<Cell>();      // Creates a set for visited nodes (O(1) contains)
 
         char superior;

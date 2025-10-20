@@ -16,10 +16,12 @@ public class Factory {
     /** Based on the number of available processors on the machine,
      *  returns a reference to a single-thread or multi-thread heuristic */
     public Heuristic newHeuristic(int dim, int level, boolean swap) {
-        if(Runtime.getRuntime().availableProcessors() < 2){
-            return new SingleThread(dim, level, swap);
+        // For small boards (≤5x5), SingleThread wins due to better alpha-beta pruning
+        // For large boards (≥7x7), MultiThread wins due to high branching factor
+        if(Runtime.getRuntime().availableProcessors() >= 2 && dim >= 7){
+            return new MultiThread(dim, level, swap);
         }
         else
-            return new MultiThread(dim, level, swap);
+            return new SingleThread(dim, level, swap);
     }
 }

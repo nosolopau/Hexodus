@@ -437,9 +437,12 @@ class GameWindow extends JFrame{
     public void generateSwapMove(Player turn){
         int [] move = new int[2];
         changeStatus(0);
+        long startTime = System.currentTimeMillis();
         move = p.generateMove(turn);
+        long thinkingTime = System.currentTimeMillis() - startTime;
+
         b[move[1]][move[0]].setIcon(ic_turn);
-        changeStatus(-1);
+        changeStatus("First move (" + move[0] + "," + move[1] + ") calculated in " + thinkingTime + "ms");
 
         swap = new JButton();
         swap.setContentAreaFilled(false);
@@ -462,9 +465,15 @@ class GameWindow extends JFrame{
     public Player generateMove(Player turn){
         Player winner = null;
         int [] move = new int[2];
-        
+
         changeStatus(0);
+        long startTime = System.currentTimeMillis();
         move = p.generateMove(turn);
+        long thinkingTime = System.currentTimeMillis() - startTime;
+
+        // Show timing in status bar
+        changeStatus("Move (" + move[0] + "," + move[1] + ") calculated in " + thinkingTime + "ms");
+
         b[move[1]][move[0]].setIcon(ic_turn);
         g[move[1]][move[0]].setAllowed(false);
         try {
@@ -475,8 +484,13 @@ class GameWindow extends JFrame{
             ex.printStackTrace();
         }
         changeTurn();
+
+        // Clear status after a short delay (in a real app, would use Timer)
+        try {
+            Thread.sleep(800);  // Show timing for 800ms
+        } catch (InterruptedException e) {}
         changeStatus(-1);
-        
+
         return winner;
     }
     
