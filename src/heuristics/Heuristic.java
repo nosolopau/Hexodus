@@ -201,7 +201,13 @@ class SingleThread extends Heuristic{
             double value = s.calculateValue();
             long evalTime = System.currentTimeMillis() - evalStart;
             if(evalTime > 10) {  // Only log if position evaluation takes >10ms
-                System.out.println("[AI]   Leaf position evaluated in " + evalTime + "ms");
+                Square target = s.getTargetCell();
+                if(target != null){
+                    System.out.println("[AI]   Leaf position evaluated in " + evalTime + "ms for (" +
+                        target.getRow() + "," + target.getColumn() + ")");
+                } else {
+                    System.out.println("[AI]   Leaf position evaluated in " + evalTime + "ms");
+                }
             }
             return value;
         }
@@ -260,7 +266,13 @@ class SingleThread extends Heuristic{
             double value = s.calculateValue();
             long evalTime = System.currentTimeMillis() - evalStart;
             if(evalTime > 10) {  // Only log if position evaluation takes >10ms
-                System.out.println("[AI]   Leaf position evaluated in " + evalTime + "ms");
+                Square target = s.getTargetCell();
+                if(target != null){
+                    System.out.println("[AI]   Leaf position evaluated in " + evalTime + "ms for (" +
+                        target.getRow() + "," + target.getColumn() + ")");
+                } else {
+                    System.out.println("[AI]   Leaf position evaluated in " + evalTime + "ms");
+                }
             }
             return value;
         }
@@ -393,61 +405,82 @@ class MultiThread extends Heuristic{
             ", free cells=" + numFreeCells + ")");
         System.out.println("[AI] Submitting " + numFreeCells + " parallel evaluation tasks to thread pool...");
 
+        // Use CompletionService to process results as they complete
+        CompletionService<MoveEvaluation> completionService = new ExecutorCompletionService<>(executor);
+
         // Submit all evaluation tasks to the thread pool
         long submitStart = System.currentTimeMillis();
         List<Future<MoveEvaluation>> futures = new ArrayList<>(numFreeCells);
         for(int i = 0; i < numFreeCells; i++){
             Square c1 = free.get(i);
             MoveEvaluationTask task = new MoveEvaluationTask(base[i], c1, color);
-            futures.add(executor.submit(task));
+            futures.add(completionService.submit(task));
         }
         long submitTime = System.currentTimeMillis() - submitStart;
-        System.out.println("[AI] All tasks submitted in " + submitTime + "ms, waiting for completion...");
+        System.out.println("[AI] All tasks submitted in " + submitTime + "ms, processing as they complete...");
 
-        // Wait for all tasks to complete and collect results
+        // Process results as they complete, with early termination
         long waitStart = System.currentTimeMillis();
-        List<MoveEvaluation> results = new ArrayList<>(numFreeCells);
-        for(Future<MoveEvaluation> future : futures){
-            try {
-                results.add(future.get());
-            } catch (InterruptedException | ExecutionException ex) {
-                ex.printStackTrace();
-                // If a task fails, use a default poor evaluation
-                results.add(new MoveEvaluation(0.0, null));
+        Square bestCell = null;
+        double bestValue = (color == 1) ? Double.NEGATIVE_INFINITY : Double.POSITIVE_INFINITY;
+        int completed = 0;
+        int cancelled = 0;
+
+        try {
+            for(int i = 0; i < numFreeCells; i++){
+                Future<MoveEvaluation> completedFuture = completionService.take();
+                MoveEvaluation result = completedFuture.get();
+                completed++;
+
+                boolean improved = false;
+                if(color == 1 && result.value > bestValue){
+                    bestValue = result.value;
+                    bestCell = result.cell;
+                    improved = true;
+                } else if(color == 0 && result.value < bestValue){
+                    bestValue = result.value;
+                    bestCell = result.cell;
+                    improved = true;
+                }
+
+                if(improved){
+                    System.out.println("[AI]   New best: (" + bestCell.getRow() + "," + bestCell.getColumn() +
+                        ") score=" + String.format("%.2f", bestValue) + " [" + completed + "/" + numFreeCells + " complete]");
+                }
+
+                // Check if we can prune remaining moves
+                // For maximizing: if we found a win (Infinity) or very good move
+                // For minimizing: if we found a win (Infinity) or very good move
+                boolean canPrune = false;
+                if(color == 1 && bestValue == Double.POSITIVE_INFINITY) canPrune = true;
+                if(color == 0 && bestValue == Double.NEGATIVE_INFINITY) canPrune = true;
+
+                if(canPrune && i < numFreeCells - 1){
+                    // Cancel remaining futures
+                    for(Future<MoveEvaluation> f : futures){
+                        if(!f.isDone()){
+                            if(f.cancel(true)){
+                                cancelled++;
+                            }
+                        }
+                    }
+                    System.out.println("[AI] Early termination: found winning move, cancelled " +
+                        cancelled + " remaining evaluations");
+                    break;
+                }
             }
+        } catch (InterruptedException | ExecutionException ex) {
+            ex.printStackTrace();
         }
+
         long waitTime = System.currentTimeMillis() - waitStart;
-        System.out.println("[AI] All " + results.size() + " evaluations completed in " + waitTime + "ms");
+        System.out.println("[AI] Completed " + completed + " evaluations in " + waitTime + "ms" +
+            (cancelled > 0 ? " (saved " + cancelled + " evaluations)" : ""));
 
-        /* According to values returned by tasks, and depending on whether it's
-         * the minimizing or maximizing player, find the best available value
-         * and return the move associated with it */
-        int bestIndex = 0;
-        double bestValue = 0.0;
-        switch(color){
-        case 0:
-            bestValue = Double.POSITIVE_INFINITY;
-            for(int k = 0; k < results.size(); k++){
-                double tmp = results.get(k).value;
-                if(tmp < bestValue){
-                    bestValue = tmp;
-                    bestIndex = k;
-                }
-            }
-            break;
-        case 1:
-            bestValue = Double.NEGATIVE_INFINITY;
-            for(int k = 0; k < results.size(); k++){
-                double tmp = results.get(k).value;
-                if(tmp > bestValue){
-                    bestValue = tmp;
-                    bestIndex = k;
-                }
-            }
-            break;
+        if(bestCell == null){
+            bestCell = free.get(0);  // Fallback
         }
 
-        Square bestCell = results.get(bestIndex).cell;
         vector[0] = bestCell.getRow();
         vector[1] = bestCell.getColumn();
 
@@ -464,7 +497,13 @@ class MultiThread extends Heuristic{
             double v = s.calculateValue();
             long evalTime = System.currentTimeMillis() - evalStart;
             if(evalTime > 50) {  // Only log slow evaluations to avoid clutter
-                System.out.println("[AI]     Position evaluation took " + evalTime + "ms (level 0)");
+                Square target = s.getTargetCell();
+                if(target != null){
+                    System.out.println("[AI]     Position evaluation took " + evalTime + "ms for (" +
+                        target.getRow() + "," + target.getColumn() + ")");
+                } else {
+                    System.out.println("[AI]     Position evaluation took " + evalTime + "ms");
+                }
             }
             return v;
         }
@@ -529,7 +568,13 @@ class MultiThread extends Heuristic{
             double v = s.calculateValue();
             long evalTime = System.currentTimeMillis() - evalStart;
             if(evalTime > 50) {  // Only log slow evaluations to avoid clutter
-                System.out.println("[AI]     Position evaluation took " + evalTime + "ms (level 0)");
+                Square target = s.getTargetCell();
+                if(target != null){
+                    System.out.println("[AI]     Position evaluation took " + evalTime + "ms for (" +
+                        target.getRow() + "," + target.getColumn() + ")");
+                } else {
+                    System.out.println("[AI]     Position evaluation took " + evalTime + "ms");
+                }
             }
             return v;
         }
