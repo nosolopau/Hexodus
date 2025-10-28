@@ -2,6 +2,10 @@
 
 A Java implementation of the Hexodus board game with AI using heuristic algorithms.
 
+## Documentation
+
+A comprehensive technical report is available in the `docs/` directory in [Spanish](docs/Technical_Report_ES.md) (original) and [English](docs/Technical_Report_EN.md) (translated version).
+
 ## Prerequisites
 
 - Java Development Kit (JDK) 8 or higher
