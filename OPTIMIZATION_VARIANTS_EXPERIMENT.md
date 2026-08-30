@@ -1,6 +1,34 @@
 # H-Search Optimization Variants Experiment
 
+> **Where the code went.** The optimizations that were adopted are in the
+> engine and on by default. The ones that were rejected have been removed
+> from the source, because they cluttered the hottest and most delicate
+> code in the project for no benefit. Everything needed to understand or
+> redo them is in this document; the working implementations are in git
+> history at commit `8f1c117` ("Speed up H-Search, refresh the interface,
+> add analysis overlay"), retrievable with:
+>
+> ```bash
+> git show 8f1c117:src/heuristics/Scratch.java        # buffer reuse
+> git show 8f1c117:src/heuristics/Simulation.java     # dirty-skip, reuse hooks
+> git show 8f1c117:src/heuristics/Heuristic.java      # presort, locality ordering
+> ```
+>
+> Adopted and live: **bitmask paths** (`OptConfig.USE_BITPATH`), the
+> **lean OR rule** (`USE_LEAN_OR`), and the **smart fallback**
+> (`USE_SMART_FALLBACK`). Still tunable: `maxPathsPerRoute`, and
+> `VERBOSE` for search tracing.
+
 ## Summary
+
+Every idea below was implemented behind a runtime flag and measured against
+the baseline with a deterministic scaffold, rather than argued about. Three
+were adopted; four were rejected on the evidence and removed.
+
+The single most useful lesson: **optimizations are not independent.** The
+dirty-skip idea would have been a clear win before bitmask paths landed, and
+was worthless after, because bitpath had already made the work it avoided
+nearly free. Measure in the order you intend to ship.
 
 Three optimization ideas were implemented behind runtime flags and benchmarked
 against the baseline with a deterministic scaffold:
@@ -334,6 +362,39 @@ Shipped-combo full-game times: 275 ms (L1), 1013 ms (L2), 7329 ms (L3) vs
 
 3. **Recommended combination:** `bitpath` always (boards ≤ 11x11, i.e. all
    practical sizes), plus `presort` only when level ≥ 3.
+
+## Scoreboard
+
+| Idea | Verdict | Why |
+|---|---|---|
+| Bitmask paths | **Adopted** | 5–7.5×; the set operations dominate the search |
+| Lean OR rule | **Adopted** | 24–38%; the OR recursion was rebuilding routes needlessly |
+| Smart fallback | **Adopted** | Not a speed change: fixes visibly poor play in decided positions |
+| Buffer reuse | Rejected | Neutral. The engine is compute-bound, not allocation-bound |
+| Root presort | Rejected | 32% slower at depth 2; the depth-3 gain is better served by iterative deepening |
+| Locality ordering | Rejected | 36% slower on 7×7; proximity-to-last-move is already the better heuristic |
+| Dirty-skip | Rejected | Correct and bit-identical, but bitpath had already made the skipped work free |
+| Path cap 10 | No-op | Routes never hold that many paths; the historic 20 never bound |
+| Path cap 5 | Rejected | 32–50% faster but changes evaluations; would need strength testing, not benchmarks |
+
+## Reproducing any of this
+
+The harnesses are still in `test/heuristics/`:
+
+```bash
+# timing, leaf-eval counts and a phase breakdown
+java -cp build/classes:build/test heuristics.OptimizationBenchmark bitpath 7 2 4 1
+
+# proves an optimization does not change what the engine computes
+java -cp build/classes:build/test heuristics.OptimizationEquivalence 7 6
+
+# full self-play games, all engine combinations, for play-level comparison
+java -cp build/classes:build/test heuristics.StrengthComparison 5 2
+```
+
+`OptimizationBenchmark` takes `baseline`, `all`, or a comma-separated list of
+`bitpath`, `leanor`, `capN`. Adding a rejected variant back means restoring
+its flag in `OptConfig` and its guarded code from the commit above.
 
 ## Future Work
 

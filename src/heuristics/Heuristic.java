@@ -95,67 +95,6 @@ public abstract class Heuristic {
     }
 
 
-    /** Hex distance between two squares on this board's adjacency
-     *  (neighbors: row/column steps plus the (+1,+1)/(-1,-1) diagonal) */
-    private static int hexDistance(int r1, int c1, int r2, int c2){
-        int dr = r1 - r2;
-        int dc = c1 - c2;
-        if((dr >= 0) == (dc >= 0))
-            return Math.max(Math.abs(dr), Math.abs(dc));
-        return Math.abs(dr) + Math.abs(dc);
-    }
-
-    /** Sorts moves by killers first, then by distance to the nearest
-     *  occupied square (locality), with distance to the last move as
-     *  tiebreak. Every move stays in the list — ordering only — so the
-     *  search result is unchanged; good moves in hex cluster around the
-     *  existing stones, which improves alpha-beta cutoffs.
-     *  @param moves List of candidate moves to sort
-     *  @param s Simulation providing the board (for stone positions)
-     *  @param killers Array of killer moves to prioritize [0=primary, 1=secondary] */
-    protected void sortByLocalityAndKillers(ArrayList<Square> moves, Simulation s, final Square[] killers) {
-        ArrayList<Square> stones = new ArrayList<Square>();
-        s.getBoard().getOccupiedInto(stones);
-        Square target = s.getTargetCell();
-        final int targetRow = (target != null) ? target.getRow() : -1;
-        final int targetCol = (target != null) ? target.getColumn() : -1;
-
-        /* Precompute a composite key per candidate: distance to the nearest
-         * stone (dominant) and distance to the last move (tiebreak) */
-        final HashMap<Square, Integer> rank = new HashMap<Square, Integer>();
-        for(int i = 0; i < moves.size(); i++){
-            Square m = moves.get(i);
-            int nearest = Integer.MAX_VALUE;
-            for(int j = 0; j < stones.size(); j++){
-                Square st = stones.get(j);
-                int d = hexDistance(m.getRow(), m.getColumn(), st.getRow(), st.getColumn());
-                if(d < nearest) nearest = d;
-            }
-            if(nearest == Integer.MAX_VALUE) nearest = 0;  // Empty board: all equal
-            int tiebreak = (target != null)
-                ? hexDistance(m.getRow(), m.getColumn(), targetRow, targetCol) : 0;
-            rank.put(m, Integer.valueOf(nearest * 1000 + tiebreak));
-        }
-
-        Collections.sort(moves, new Comparator<Square>() {
-            public int compare(Square s1, Square s2) {
-                if (killers != null) {
-                    boolean s1IsKiller = (s1.equals(killers[0]) || s1.equals(killers[1]));
-                    boolean s2IsKiller = (s2.equals(killers[0]) || s2.equals(killers[1]));
-
-                    if (s1IsKiller && !s2IsKiller) return -1;
-                    if (s2IsKiller && !s1IsKiller) return 1;
-                    if (s1IsKiller && s2IsKiller) {
-                        if (s1.equals(killers[0])) return -1;
-                        if (s2.equals(killers[0])) return 1;
-                        return 0;
-                    }
-                }
-                return rank.get(s1).intValue() - rank.get(s2).intValue();
-            }
-        });
-    }
-
     /** Sorts moves by killer moves first, then proximity to target.
      *  @param moves List of candidate moves to sort
      *  @param target The reference square for proximity sorting
@@ -223,30 +162,6 @@ class SingleThread extends Heuristic{
     public void newMove(int row, int column, int color){
         Simulation newSim = new Simulation(base, row, column, color);
         base = newSim;
-    }
-
-    /** Orders root moves by a shallow (depth-0) evaluation so the most
-     *  promising options are searched first, improving alpha-beta cutoffs.
-     *  Used instead of proximity ordering when OptConfig.USE_ROOT_PRESORT
-     *  is active.
-     *  @param moves List of candidate root moves to sort
-     *  @param s Simulation representing the current position
-     *  @param maximizing True when ordering for the maximizing player */
-    private void presortByShallowEval(ArrayList<Square> moves, Simulation s, final boolean maximizing){
-        final HashMap<Square, Double> scores = new HashMap<Square, Double>();
-        for(int i = 0; i < moves.size(); i++){
-            Square c = moves.get(i);
-            Simulation n = new Simulation(s, c, maximizing ? 1 : 0);
-            scores.put(c, Double.valueOf(n.calculateValue()));
-            n.restore();
-        }
-        Collections.sort(moves, new Comparator<Square>() {
-            public int compare(Square a, Square b) {
-                double va = scores.get(a).doubleValue();
-                double vb = scores.get(b).doubleValue();
-                return maximizing ? Double.compare(vb, va) : Double.compare(va, vb);
-            }
-        });
     }
 
     /** Generates a random legal move among available ones
@@ -342,12 +257,7 @@ class SingleThread extends Heuristic{
             log("[AI] Evaluating " + free.size() + " candidate moves at root level...");
         }
 
-        if(OptConfig.USE_ROOT_PRESORT && level == maxDepth)
-            presortByShallowEval(free, s, true);
-        else if(OptConfig.USE_LOCAL_ORDERING)
-            sortByLocalityAndKillers(free, s, killerMoves[level]);  // Order by killers then near-stone locality
-        else
-            sortByProximityAndKillers(free, s.getTargetCell(), killerMoves[level]);  // Order by killers then proximity
+        sortByProximityAndKillers(free, s.getTargetCell(), killerMoves[level]);  // Order by killers then proximity
 
         int movesEvaluated = 0;
         int cutoffs = 0;
@@ -415,12 +325,7 @@ class SingleThread extends Heuristic{
             log("[AI] Evaluating " + free.size() + " candidate moves at root level...");
         }
 
-        if(OptConfig.USE_ROOT_PRESORT && level == maxDepth)
-            presortByShallowEval(free, s, false);
-        else if(OptConfig.USE_LOCAL_ORDERING)
-            sortByLocalityAndKillers(free, s, killerMoves[level]);  // Order by killers then near-stone locality
-        else
-            sortByProximityAndKillers(free, s.getTargetCell(), killerMoves[level]);  // Order by killers then proximity
+        sortByProximityAndKillers(free, s.getTargetCell(), killerMoves[level]);  // Order by killers then proximity
 
         int movesEvaluated = 0;
         int cutoffs = 0;
@@ -675,10 +580,7 @@ class MultiThread extends Heuristic{
             log("[AI]   Evaluating " + free.size() + " moves at depth " + level);
         }
 
-        if(OptConfig.USE_LOCAL_ORDERING)
-            sortByLocalityAndKillers(free, s, killerMoves[level]);  // Order by killers then near-stone locality
-        else
-            sortByProximityAndKillers(free, s.getTargetCell(), killerMoves[level]);  // Order by killers then proximity
+        sortByProximityAndKillers(free, s.getTargetCell(), killerMoves[level]);  // Order by killers then proximity
 
         int movesEvaluated = 0;
         int cutoffs = 0;
@@ -749,10 +651,7 @@ class MultiThread extends Heuristic{
             log("[AI]   Evaluating " + free.size() + " moves at depth " + level);
         }
 
-        if(OptConfig.USE_LOCAL_ORDERING)
-            sortByLocalityAndKillers(free, s, killerMoves[level]);  // Order by killers then near-stone locality
-        else
-            sortByProximityAndKillers(free, s.getTargetCell(), killerMoves[level]);  // Order by killers then proximity
+        sortByProximityAndKillers(free, s.getTargetCell(), killerMoves[level]);  // Order by killers then proximity
 
         int movesEvaluated = 0;
         int cutoffs = 0;

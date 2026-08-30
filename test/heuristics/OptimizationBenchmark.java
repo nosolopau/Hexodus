@@ -16,7 +16,7 @@ import java.util.Arrays;
  * Usage:
  *   java heuristics.OptimizationBenchmark [variant] [dim] [level] [moves] [reps]
  *
- * Variants: baseline | all | comma-list of bitpath,reuse,presort,localorder
+ * Variants: baseline | all | comma-list of bitpath,leanor,capN
  * Defaults: baseline 5 2 10 3
  */
 public class OptimizationBenchmark {
@@ -35,10 +35,6 @@ public class OptimizationBenchmark {
         System.out.println("variant=" + variant + "  board=" + dim + "x" + dim
             + "  level=" + level + "  moves=" + maxMoves + "  reps=" + reps);
         System.out.println("flags: bitpath=" + OptConfig.USE_BITPATH
-            + " reuse=" + OptConfig.USE_REUSE
-            + " presort=" + OptConfig.USE_ROOT_PRESORT
-            + " localorder=" + OptConfig.USE_LOCAL_ORDERING
-            + " dirtyskip=" + OptConfig.USE_DIRTY_SKIP
             + " leanor=" + OptConfig.USE_LEAN_OR
             + " pathCap=" + OptConfig.maxPathsPerRoute);
         System.out.println();
@@ -113,21 +109,12 @@ public class OptimizationBenchmark {
         System.out.printf("  %-28s %8d ms  %5.1f%%%n", "other (sort, book, misc)",
             (totalNs - accounted) / 1_000_000, 100.0 * (totalNs - accounted) / totalNs);
 
-        if (OptConfig.triplesTotal > 0) {
-            System.out.printf("  dirty-skip: %d of %d triples skipped (%.1f%%)%n",
-                OptConfig.triplesSkipped, OptConfig.triplesTotal,
-                100.0 * OptConfig.triplesSkipped / OptConfig.triplesTotal);
-        }
     }
 
     /** Variant is "baseline", "all", or a comma-separated combination of
      *  bitpath, reuse and presort (e.g. "bitpath,reuse"). */
     private static void configure(String variant, int dim) {
         OptConfig.USE_BITPATH = false;
-        OptConfig.USE_REUSE = false;
-        OptConfig.USE_ROOT_PRESORT = false;
-        OptConfig.USE_LOCAL_ORDERING = false;
-        OptConfig.USE_DIRTY_SKIP = false;
         OptConfig.USE_LEAN_OR = false;
         OptConfig.USE_SMART_FALLBACK = false;  // Historic behavior, keeps timings comparable
         OptConfig.maxPathsPerRoute = 20;
@@ -135,15 +122,11 @@ public class OptimizationBenchmark {
         if (variant.equals("baseline")) return;
 
         for (String token : variant.equals("all")
-                ? new String[]{"bitpath", "reuse", "presort", "localorder"} : variant.split(",")) {
+                ? new String[]{"bitpath", "leanor"} : variant.split(",")) {
             if (token.equals("bitpath")) {
                 if (dim > 11) throw new IllegalArgumentException("bitpath supports boards up to 11x11");
                 OptConfig.USE_BITPATH = true;
             }
-            else if (token.equals("reuse")) OptConfig.USE_REUSE = true;
-            else if (token.equals("presort")) OptConfig.USE_ROOT_PRESORT = true;
-            else if (token.equals("localorder")) OptConfig.USE_LOCAL_ORDERING = true;
-            else if (token.equals("dirtyskip")) OptConfig.USE_DIRTY_SKIP = true;
             else if (token.equals("leanor")) OptConfig.USE_LEAN_OR = true;
             else if (token.startsWith("cap")) OptConfig.maxPathsPerRoute = Integer.parseInt(token.substring(3));
             else throw new IllegalArgumentException("unknown variant: " + token);

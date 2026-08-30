@@ -303,13 +303,8 @@ public class Simulation {
         Connections SubSC = SC[color];
         Connections SubC;
 
-        /* The search works on a private copy of the board connections. The
-         * reuse variant copies into per-thread scratch buffers (recycling the
-         * Route matrix and Route objects) instead of cloning. */
-        if(OptConfig.USE_REUSE)
-            SubC = Scratch.get(board.getDimension()).copyConnections(connections);
-        else
-            SubC = connections.clone();
+        // The search works on a private copy of the board connections
+        SubC = connections.clone();
 
         // Prevents indices from having to be redefined in each iteration
         int g1;
@@ -332,7 +327,6 @@ public class Simulation {
         while(newsConnections && (iterations < maxDepth)){
             newsConnections = false;
             iterations++;
-            if(OptConfig.USE_DIRTY_SKIP) SubC.refreshNewFlags();
             for(g = 0; g < numNodes; g++){
                 cg = nodes[g];
                 for(g1 = 0; g1 < numNodes; g1++){
@@ -355,7 +349,7 @@ public class Simulation {
                                         Route r2 = SubC.getRoute(cg, cg2);
                                         if(r2 == null) r2 = SubC.getRoute(cg2, cg);
                                         
-                                        if((r1 != null) && (r2 != null) && routePairWorthVisiting(r1, r2)){
+                                        if((r1 != null) && (r2 != null)){
                                             ic1 = r1.getIterator();
 
                                             /* The following block ensures that all possible combinations
@@ -432,18 +426,9 @@ public class Simulation {
                 mod.changeNew(false);
                 renew.add(mod);
             }
-            if(OptConfig.USE_REUSE){
-                // Swap the lists instead of cloning; net effect is identical
-                ArrayList tmp = expiring;
-                expiring = nextExpiring;
-                nextExpiring = tmp;
-                nextExpiring.clear();
-            }
-            else{
-                expiring.clear();
-                expiring = (ArrayList) nextExpiring.clone();
-                nextExpiring.clear();
-            }
+            expiring.clear();
+            expiring = (ArrayList) nextExpiring.clone();
+            nextExpiring.clear();
         }
 
         tNow = System.nanoTime();
@@ -469,17 +454,9 @@ public class Simulation {
         double B[];     // The column matrix of independent terms of the equation
         int sourceIndex = -1;
 
-        if(OptConfig.USE_REUSE){
-            Scratch scratch = Scratch.get(board.getDimension());
-            M = scratch.getM(numNodes);
-            N = scratch.getN(numNodes);
-            B = scratch.getB(numNodes);
-        }
-        else{
-            M = new double [numNodes][numNodes];
-            N = new double [numNodes-1][numNodes-1];
-            B = new double [numNodes-1];
-        }
+        M = new double [numNodes][numNodes];
+        N = new double [numNodes-1][numNodes-1];
+        B = new double [numNodes-1];
 
         int Current = 1; // Intensity transmitted by the current source
         int n = 0;          // Index in G of current element
@@ -560,22 +537,6 @@ public class Simulation {
         return c[sourceIndex];
     }
     
-    /** Dirty-skip check for one H-search triple: when neither route
-     *  contains a new path, the pair scan below cannot fire (the AND rule
-     *  requires at least one new ingredient), so it can be skipped
-     *  wholesale. Exact, not heuristic: the skipped scan has no observable
-     *  effect, and visit order is preserved, so results are bit-identical.
-     *  @param r1 Route between the pivot and the first auxiliary cell
-     *  @param r2 Route between the pivot and the second auxiliary cell
-     *  @return True if the pair scan must run */
-    private static boolean routePairWorthVisiting(Route r1, Route r2){
-        if(!OptConfig.USE_DIRTY_SKIP) return true;
-        OptConfig.triplesTotal++;
-        if(r1.hasAnyNew() || r2.hasAnyNew()) return true;
-        OptConfig.triplesSkipped++;
-        return false;
-    }
-
     /** Recursive function that applies the OR rule on a route created by applying
      *  the AND rule. The length of the routes passed to it is limited by K
      *  to prevent the calls from exploding. */

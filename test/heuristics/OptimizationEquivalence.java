@@ -14,19 +14,17 @@ public class OptimizationEquivalence {
         int moves = args.length > 1 ? Integer.parseInt(args[1]) : 12;
 
         // Each config: {bitpath, reuse, dirtyskip, leanor}
-        String[] names = {"baseline", "bitpath", "reuse", "dirtyskip", "leanor", "all"};
+        String[] names = {"baseline", "bitpath", "leanor", "both"};
         boolean[][] flags = {
-            {false, false, false, false},
-            {true,  false, false, false},
-            {false, true,  false, false},
-            {false, false, true,  false},
-            {false, false, false, true },
-            {true,  true,  true,  true },
+            {false, false},
+            {true,  false},
+            {false, true },
+            {true,  true },
         };
 
         double[][] values = new double[names.length][];
         for (int c = 0; c < names.length; c++)
-            values[c] = valuesFor(dim, moves, flags[c][0], flags[c][1], flags[c][2], flags[c][3]);
+            values[c] = valuesFor(dim, moves, flags[c][0], flags[c][1]);
 
         boolean ok = true;
         for (int i = 0; i < moves; i++) {
@@ -44,13 +42,9 @@ public class OptimizationEquivalence {
     }
 
     /** Replays the scripted game and records calculateValue after each move. */
-    private static double[] valuesFor(int dim, int moves, boolean bitpath, boolean reuse,
-            boolean dirtySkip, boolean leanOr) {
+    private static double[] valuesFor(int dim, int moves, boolean bitpath, boolean leanOr) {
         OptConfig.USE_BITPATH = bitpath;
-        OptConfig.USE_REUSE = reuse;
-        OptConfig.USE_DIRTY_SKIP = dirtySkip;
         OptConfig.USE_LEAN_OR = leanOr;
-        OptConfig.USE_ROOT_PRESORT = false;
 
         double[] values = new double[moves];
         Simulation sim = new Simulation(dim);

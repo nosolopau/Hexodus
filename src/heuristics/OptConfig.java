@@ -19,33 +19,6 @@ public final class OptConfig {
      *  helpers that iterate path cells are not supported in this mode. */
     public static boolean USE_BITPATH = false;
 
-    /** Reuse per-thread scratch buffers in calculateResistance (connection
-     *  matrix copy, Route objects, conductance matrices) instead of
-     *  allocating fresh objects on every evaluation. */
-    public static boolean USE_REUSE = false;
-
-    /** Order root moves by a shallow depth-0 evaluation before the full
-     *  alpha-beta search, instead of the proximity ordering, so the most
-     *  promising options are searched first. */
-    public static boolean USE_ROOT_PRESORT = false;
-
-    /** Order candidate moves at every tree level by distance to the
-     *  nearest stone (killers still first, distance to the last move as
-     *  tiebreak). Every legal move is still searched — ordering only —
-     *  so the root minimax value is unchanged. */
-    public static boolean USE_LOCAL_ORDERING = false;
-
-    /** Skip H-search triples wholesale when neither of the two routes
-     *  contains a new path: the AND rule needs at least one new ingredient,
-     *  so the skipped pair scan could not have fired. Exact (visit order
-     *  preserved), so results are bit-identical to the baseline. */
-    public static boolean USE_DIRTY_SKIP = false;
-
-    /* Dirty-skip instrumentation: triples whose routes were checked, and
-     * how many of those were skipped as clean. */
-    public static long triplesTotal = 0;
-    public static long triplesSkipped = 0;
-
     /** Lean OR-rule support structures: cloneWithoutPath copies the path
      *  list directly (skipping the excluded path) instead of re-running
      *  the add() dedup scan per path plus an ArrayList.remove, and
@@ -101,7 +74,6 @@ public final class OptConfig {
     /** Resets the phase timers (called by benchmarks before a measured run) */
     public static void resetTimers(){
         nsSetup = nsHSearch = nsMatrix = nsSolve = nsSimBuild = nsRestore = 0;
-        triplesTotal = triplesSkipped = 0;
     }
 
     private OptConfig() {
