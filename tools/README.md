@@ -36,3 +36,18 @@ javac -d /tmp tools/StoneGen.java && java -cp /tmp StoneGen src/images
 
 Transparency matters: the original icons had an opaque white background,
 which shows as a white box on the non-white board.
+
+## Screenshot
+
+`ScreenshotTool.java` regenerates the README screenshot. It builds a real
+`GameWindow`, plays a short opening through the actual cell buttons (so
+the engine runs and the analysis overlay is genuine), then paints the
+window into a PNG — no screen-capture permission needed, and the image
+can never drift from the current interface:
+
+```bash
+javac -cp build/classes -d /tmp tools/ScreenshotTool.java
+java -cp build/classes:/tmp ui.ScreenshotTool 7 docs/images/screenshot.png
+```
+
+It declares `package ui` because `GameWindow` is package-private.
