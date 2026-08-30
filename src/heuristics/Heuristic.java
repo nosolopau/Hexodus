@@ -232,118 +232,54 @@ class SingleThread extends Heuristic{
     }
 
     public double alphaBetaMax(Simulation s, int level, double alpha, double beta) {
-        if(level == 0){
-            long evalStart = System.currentTimeMillis();
-            double value = s.calculateValue();
-            long evalTime = System.currentTimeMillis() - evalStart;
-            if(evalTime > 10) {  // Only log if position evaluation takes >10ms
-                Square target = s.getTargetCell();
-                if(target != null){
-                    log("[AI]   Leaf position evaluated in " + evalTime + "ms for (" +
-                        target.getRow() + "," + target.getColumn() + ")");
-                } else {
-                    log("[AI]   Leaf position evaluated in " + evalTime + "ms");
-                }
-            }
-            return value;
-        }
-
-        // Reuse buffer instead of creating new ArrayList
-        ArrayList <Square> free = freeBuffers[level];
-        free.clear();
-        s.getFreeCellsInto(free);  // Populate buffer
-
-        if(level == maxDepth) {
-            log("[AI] Evaluating " + free.size() + " candidate moves at root level...");
-        }
-
-        sortByProximityAndKillers(free, s.getTargetCell(), killerMoves[level]);  // Order by killers then proximity
-
-        int movesEvaluated = 0;
-        int cutoffs = 0;
-        Iterator <Square> iterator = free.iterator();
-        while(iterator.hasNext()){
-            Square c = iterator.next();
-            Simulation n = new Simulation(s, c, 1);
-
-            double value = alphaBetaMin(n, level - 1, alpha, beta);
-            movesEvaluated++;
-
-            if(Analysis.ENABLED && level == maxDepth)
-                Analysis.record(c.getRow(), c.getColumn(), value);
-
-            if(alpha < value){
-                alpha = value;
-                if(level == maxDepth) { // Ensures best move is generated at last level
-                    bestMax = c;
-                    log("[AI]   New best move: (" + c.getRow() + "," + c.getColumn() +
-                        ") score=" + String.format("%.2f", value) + " [" + movesEvaluated + "/" + free.size() + " moves evaluated]");
-                }
-            }
-
-            n.restore();
-
-            if( alpha >= beta ){
-                // Beta cutoff: store this move as a killer
-                if (killerMoves[level][0] == null || !c.equals(killerMoves[level][0])) {
-                    killerMoves[level][1] = killerMoves[level][0];  // Shift secondary
-                    killerMoves[level][0] = c;  // New primary killer
-                }
-                cutoffs++;
-                if(level == maxDepth) {
-                    log("[AI] Beta cutoff - pruned " + (free.size() - movesEvaluated) + " remaining moves");
-                }
-                return alpha;
-            }
-        }
-        return alpha;
+        return alphaBeta(s, level, alpha, beta, true);
     }
 
     public double alphaBetaMin(Simulation s, int level, double alpha, double beta) {
-        if(level == 0){
-            long evalStart = System.currentTimeMillis();
-            double value = s.calculateValue();
-            long evalTime = System.currentTimeMillis() - evalStart;
-            if(evalTime > 10) {  // Only log if position evaluation takes >10ms
-                Square target = s.getTargetCell();
-                if(target != null){
-                    log("[AI]   Leaf position evaluated in " + evalTime + "ms for (" +
-                        target.getRow() + "," + target.getColumn() + ")");
-                } else {
-                    log("[AI]   Leaf position evaluated in " + evalTime + "ms");
-                }
-            }
-            return value;
-        }
+        return alphaBeta(s, level, alpha, beta, false);
+    }
+
+    /** Alpha-beta search over the move tree.
+     *
+     *  The two players' searches differ only in which bound they tighten:
+     *  the maximising side raises alpha, the minimising side lowers beta.
+     *  Writing them as one method keeps the two halves from drifting apart.
+     *
+     *  @param s Position to search from
+     *  @param level Plies left to search; 0 evaluates the position
+     *  @param alpha Best score the maximising player is assured of
+     *  @param beta Best score the minimising player is assured of
+     *  @param maximising True when searching for the vertical player
+     *  @return The position's value within the alpha-beta window */
+    private double alphaBeta(Simulation s, int level, double alpha, double beta, boolean maximising) {
+        if(level == 0) return evaluateLeaf(s);
 
         // Reuse buffer instead of creating new ArrayList
         ArrayList <Square> free = freeBuffers[level];
         free.clear();
         s.getFreeCellsInto(free);  // Populate buffer
 
-        if(level == maxDepth) {
+        if(level == maxDepth)
             log("[AI] Evaluating " + free.size() + " candidate moves at root level...");
-        }
 
         sortByProximityAndKillers(free, s.getTargetCell(), killerMoves[level]);  // Order by killers then proximity
 
         int movesEvaluated = 0;
-        int cutoffs = 0;
         Iterator <Square> iterator = free.iterator();
         while(iterator.hasNext()){
-            Square c = (Square)iterator.next();
-            Simulation n = new Simulation(s, c, 0);
+            Square c = iterator.next();
+            Simulation n = new Simulation(s, c, maximising ? 1 : 0);
 
-            double value = alphaBetaMax(n, level - 1, alpha, beta);
+            double value = alphaBeta(n, level - 1, alpha, beta, !maximising);
             movesEvaluated++;
 
             if(Analysis.ENABLED && level == maxDepth)
                 Analysis.record(c.getRow(), c.getColumn(), value);
 
-            if(value < beta){
-                beta = value;
-                if(level == maxDepth) {
-                    bestMin = c;
+            if(maximising ? (alpha < value) : (value < beta)){
+                if(maximising) alpha = value; else beta = value;
+                if(level == maxDepth) {   // Ensures the best move is recorded at the root
+                    if(maximising) bestMax = c; else bestMin = c;
                     log("[AI]   New best move: (" + c.getRow() + "," + c.getColumn() +
                         ") score=" + String.format("%.2f", value) + " [" + movesEvaluated + "/" + free.size() + " moves evaluated]");
                 }
@@ -352,19 +288,33 @@ class SingleThread extends Heuristic{
             n.restore();
 
             if( alpha >= beta ){
-                // Alpha cutoff: store this move as a killer
+                // Cutoff: remember this move, it is likely to cut again
                 if (killerMoves[level][0] == null || !c.equals(killerMoves[level][0])) {
                     killerMoves[level][1] = killerMoves[level][0];  // Shift secondary
                     killerMoves[level][0] = c;  // New primary killer
                 }
-                cutoffs++;
-                if(level == maxDepth) {
-                    log("[AI] Alpha cutoff - pruned " + (free.size() - movesEvaluated) + " remaining moves");
-                }
-                return beta;
+                if(level == maxDepth)
+                    log("[AI] Cutoff - pruned " + (free.size() - movesEvaluated) + " remaining moves");
+                return maximising ? alpha : beta;
             }
         }
-        return beta;
+        return maximising ? alpha : beta;
+    }
+
+    /** Evaluates a leaf position, reporting any slow evaluation */
+    private double evaluateLeaf(Simulation s) {
+        long evalStart = System.currentTimeMillis();
+        double value = s.calculateValue();
+        long evalTime = System.currentTimeMillis() - evalStart;
+        if(evalTime > 10) {  // Only log if position evaluation takes >10ms
+            Square target = s.getTargetCell();
+            if(target != null)
+                log("[AI]   Leaf position evaluated in " + evalTime + "ms for (" +
+                    target.getRow() + "," + target.getColumn() + ")");
+            else
+                log("[AI]   Leaf position evaluated in " + evalTime + "ms");
+        }
+        return value;
     }
 }
 
@@ -554,21 +504,27 @@ class MultiThread extends Heuristic{
     }
 
     public double alphaBetaMax(Simulation s, int level, double alpha, double beta){
-        if(level == 0){
-            long evalStart = System.currentTimeMillis();
-            double v = s.calculateValue();
-            long evalTime = System.currentTimeMillis() - evalStart;
-            if(evalTime > 50) {  // Only log slow evaluations to avoid clutter
-                Square target = s.getTargetCell();
-                if(target != null){
-                    log("[AI]     Position evaluation took " + evalTime + "ms for (" +
-                        target.getRow() + "," + target.getColumn() + ")");
-                } else {
-                    log("[AI]     Position evaluation took " + evalTime + "ms");
-                }
-            }
-            return v;
-        }
+        return alphaBeta(s, level, alpha, beta, true);
+    }
+
+    public double alphaBetaMin(Simulation s, int level, double alpha, double beta){
+        return alphaBeta(s, level, alpha, beta, false);
+    }
+
+    /** Alpha-beta search over one worker's slice of the move tree.
+     *
+     *  As in the single-threaded engine, the two players' searches differ
+     *  only in which bound they tighten, so they share one body. Buffers
+     *  are thread-local because several of these run at once.
+     *
+     *  @param s Position to search from
+     *  @param level Plies left to search; 0 evaluates the position
+     *  @param alpha Best score the maximising player is assured of
+     *  @param beta Best score the minimising player is assured of
+     *  @param maximising True when searching for the vertical player
+     *  @return The position's value within the alpha-beta window */
+    private double alphaBeta(Simulation s, int level, double alpha, double beta, boolean maximising){
+        if(level == 0) return evaluateLeaf(s);
 
         // Reuse thread-local buffer instead of creating new ArrayList
         ArrayList<Square>[] buffers = threadLocalBuffers.get();
@@ -576,123 +532,62 @@ class MultiThread extends Heuristic{
         free.clear();
         s.getFreeCellsInto(free);  // Populate buffer
 
-        if(level == maxDepth - 1) {  // Log at depth 1 (one level below root)
+        if(level == maxDepth - 1)   // Log one level below the root
             log("[AI]   Evaluating " + free.size() + " moves at depth " + level);
-        }
 
         sortByProximityAndKillers(free, s.getTargetCell(), killerMoves[level]);  // Order by killers then proximity
 
         int movesEvaluated = 0;
-        int cutoffs = 0;
         long startTime = System.currentTimeMillis();
 
         Iterator <Square> iterator = free.iterator();
         while(iterator.hasNext()){
             Square c = iterator.next();
-            Simulation n = new Simulation(s, c, 1);
+            Simulation n = new Simulation(s, c, maximising ? 1 : 0);
 
-            double score = alphaBetaMin(n, level - 1, alpha, beta);
+            double score = alphaBeta(n, level - 1, alpha, beta, !maximising);
             movesEvaluated++;
 
-            if(alpha < score){
-                alpha = score;
+            if(maximising ? (alpha < score) : (score < beta)){
+                if(maximising) alpha = score; else beta = score;
             }
 
             n.restore();
 
             if( alpha >= beta ){
-                // Beta cutoff: store this move as a killer
+                // Cutoff: remember this move, it is likely to cut again
                 if (killerMoves[level][0] == null || !c.equals(killerMoves[level][0])) {
                     killerMoves[level][1] = killerMoves[level][0];  // Shift secondary
                     killerMoves[level][0] = c;  // New primary killer
                 }
-                cutoffs++;
-                if(level == maxDepth - 1) {
-                    long elapsed = System.currentTimeMillis() - startTime;
+                if(level == maxDepth - 1)
                     log("[AI]   Cutoff at depth " + level + " after " + movesEvaluated + "/" + free.size() +
-                        " moves (" + elapsed + "ms)");
-                }
-                return alpha;
+                        " moves (" + (System.currentTimeMillis() - startTime) + "ms)");
+                return maximising ? alpha : beta;
             }
         }
 
-        if(level == maxDepth - 1) {
-            long elapsed = System.currentTimeMillis() - startTime;
-            log("[AI]   Completed depth " + level + ": " + movesEvaluated + " moves in " + elapsed + "ms");
-        }
+        if(level == maxDepth - 1)
+            log("[AI]   Completed depth " + level + ": " + movesEvaluated + " moves in " +
+                (System.currentTimeMillis() - startTime) + "ms");
 
-        return alpha;
+        return maximising ? alpha : beta;
     }
 
-    public double alphaBetaMin(Simulation s, int level, double alpha, double beta){
-        if(level == 0){
-            long evalStart = System.currentTimeMillis();
-            double v = s.calculateValue();
-            long evalTime = System.currentTimeMillis() - evalStart;
-            if(evalTime > 50) {  // Only log slow evaluations to avoid clutter
-                Square target = s.getTargetCell();
-                if(target != null){
-                    log("[AI]     Position evaluation took " + evalTime + "ms for (" +
-                        target.getRow() + "," + target.getColumn() + ")");
-                } else {
-                    log("[AI]     Position evaluation took " + evalTime + "ms");
-                }
-            }
-            return v;
+    /** Evaluates a leaf position, reporting any slow evaluation */
+    private double evaluateLeaf(Simulation s){
+        long evalStart = System.currentTimeMillis();
+        double v = s.calculateValue();
+        long evalTime = System.currentTimeMillis() - evalStart;
+        if(evalTime > 50) {  // Only log slow evaluations to avoid clutter
+            Square target = s.getTargetCell();
+            if(target != null)
+                log("[AI]     Position evaluation took " + evalTime + "ms for (" +
+                    target.getRow() + "," + target.getColumn() + ")");
+            else
+                log("[AI]     Position evaluation took " + evalTime + "ms");
         }
-
-        // Reuse thread-local buffer instead of creating new ArrayList
-        ArrayList<Square>[] buffers = threadLocalBuffers.get();
-        ArrayList <Square> free = buffers[level];
-        free.clear();
-        s.getFreeCellsInto(free);  // Populate buffer
-
-        if(level == maxDepth - 1) {  // Log at depth 1 (one level below root)
-            log("[AI]   Evaluating " + free.size() + " moves at depth " + level);
-        }
-
-        sortByProximityAndKillers(free, s.getTargetCell(), killerMoves[level]);  // Order by killers then proximity
-
-        int movesEvaluated = 0;
-        int cutoffs = 0;
-        long startTime = System.currentTimeMillis();
-
-        Iterator <Square> iterator = free.iterator();
-        while(iterator.hasNext()){
-            Square c = (Square)iterator.next();
-            Simulation n = new Simulation(s, c, 0);
-
-            double score = alphaBetaMax(n, level - 1, alpha, beta);
-            movesEvaluated++;
-
-            if(score < beta){
-                beta = score;
-            }
-
-            n.restore();
-
-            if( alpha >= beta ){
-                // Alpha cutoff: store this move as a killer
-                if (killerMoves[level][0] == null || !c.equals(killerMoves[level][0])) {
-                    killerMoves[level][1] = killerMoves[level][0];  // Shift secondary
-                    killerMoves[level][0] = c;  // New primary killer
-                }
-                cutoffs++;
-                if(level == maxDepth - 1) {
-                    long elapsed = System.currentTimeMillis() - startTime;
-                    log("[AI]   Cutoff at depth " + level + " after " + movesEvaluated + "/" + free.size() +
-                        " moves (" + elapsed + "ms)");
-                }
-                return beta;
-            }
-        }
-
-        if(level == maxDepth - 1) {
-            long elapsed = System.currentTimeMillis() - startTime;
-            log("[AI]   Completed depth " + level + ": " + movesEvaluated + " moves in " + elapsed + "ms");
-        }
-
-        return beta;
+        return v;
     }
 
     /**
