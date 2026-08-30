@@ -18,15 +18,53 @@ import game.*;
  *  @version 1.0
  */
 public class Main{
-   
+
+    /** Board sizes offered in the New Game dialog, in menu order. Each one
+     *  needs matching artwork at images/<dim>.png; the window layout is
+     *  derived from the dimension in GameWindow.newGame, so no per-size
+     *  layout entry is required. */
+    static final int[] DIMENSIONS = {5, 6, 7, 8, 9};
+
+    /** Window background, matching the margin colour baked into the board
+     *  artwork so the board sits on one continuous surface rather than a
+     *  visible rectangle on white. */
+    static final Color BACKGROUND = new Color(0xF7, 0xF5, 0xF1);
+
+    /** Index into DIMENSIONS used when nothing is remembered yet (6x6) */
+    static final int DEFAULT_DIMENSION_INDEX = 1;
+
     /** Creates a new instance of the main class Main */
     public Main(){
     }
     
     /** Starts the program execution
      *  @param args Command line arguments */
-    public static void main(String[] args){        
-        GameWindow game = new GameWindow(6, 0, 1, true);
+    public static void main(String[] args){
+        // Capture stack traces (including any thrown on the Swing thread)
+        ErrorLog.install();
+
+        // Fonts and colours for menus, dialogs and labels
+        Theme.apply();
+
+        /* The startup game honors the selections remembered from the last
+         * New Game dialog (defaults: 6x6, human vs computer, swap on,
+         * Normal difficulty, Bitmap H-Search). */
+        heuristics.OptConfig.USE_BITPATH = (GamePrefs.get(GamePrefs.ALGORITHM, 1) == 1);
+
+        int dimIndex = GamePrefs.get(GamePrefs.DIMENSION, DEFAULT_DIMENSION_INDEX);
+        if(dimIndex < 0 || dimIndex >= DIMENSIONS.length) dimIndex = DEFAULT_DIMENSION_INDEX;
+        int dim = DIMENSIONS[dimIndex];
+
+        int difficulty = GamePrefs.get(GamePrefs.DIFFICULTY, 0) + 1;
+        if(difficulty < 1 || difficulty > 3) difficulty = 1;
+
+        /* Player types are deliberately NOT restored: launching into a
+         * remembered computer-vs-computer setup would start a game playing
+         * itself before the user has done anything. Startup is always
+         * human (vertical) vs computer (horizontal). */
+        GameWindow game = new GameWindow(dim, 0, 1,
+            GamePrefs.get(GamePrefs.SWAP, true),
+            difficulty);
 
         WindowCloseHandler window = new WindowCloseHandler();
         game.addWindowListener(window);
@@ -38,6 +76,7 @@ class OptionsDialog extends JDialog{
     private JRadioButton v1, v2, h1, h2;    // References to the controls
     private JComboBox selDimension;
     private JComboBox selDifficulty;
+    private JComboBox selAlgorithm;
     private JCheckBox enableSwap;
     private GameWindow game;
 
@@ -45,39 +84,42 @@ class OptionsDialog extends JDialog{
      *  @param principal    Reference to the main game window */
     public OptionsDialog(GameWindow principal){
         super(principal, "New Game", true);
-        setSize(300, 380);
+        setSize(300, 420);
         setResizable(false);
-        
+
         game = principal;
-        
+
         Container panel = getContentPane();
         panel.setLayout(null);
-        
+
         JPanel options = new JPanel();
         JPanel vertical = new JPanel();
         JPanel horizontal = new JPanel();
         options.setBorder(new TitledBorder("Game Options"));
         vertical.setBorder(new TitledBorder("Player 1 (vertical)"));
         horizontal.setBorder(new TitledBorder("Player 2 (horizontal)"));
-        options.setBounds(10, 10, 280, 130);
-        vertical.setBounds(10, 150, 280, 80);
-        horizontal.setBounds(10, 240, 280, 80);
+        options.setBounds(10, 10, 280, 170);
+        vertical.setBounds(10, 190, 280, 80);
+        horizontal.setBounds(10, 280, 280, 80);
         panel.add(options);
         panel.add(vertical);
         panel.add(horizontal);
 
         JButton Ok = new JButton();
         Ok.addActionListener(new AcceptHandler());
-        Ok.setBounds(190, 320, 100, 30);
+        Ok.setBounds(190, 360, 100, 30);
         Ok.setText("Accept");
         panel.add(Ok);
               
         ButtonGroup botonesVertical = new ButtonGroup();
         ButtonGroup botonesHorizontal = new ButtonGroup();
-        v1 = new JRadioButton("Human"); 
+        v1 = new JRadioButton("Human");
         v2 = new JRadioButton("Computer");
-        h1 = new JRadioButton("Human"); 
+        h1 = new JRadioButton("Human");
         h2 = new JRadioButton("Computer");
+        /* Always opens on human vs computer: computer-vs-computer is a
+         * demo mode, chosen deliberately rather than inherited from the
+         * previous game. */
         v1.setSelected(true);
         h2.setSelected(true);
         botonesVertical.add(v1);  
@@ -86,31 +128,84 @@ class OptionsDialog extends JDialog{
         botonesHorizontal.add(h2);
         
         selDimension = new JComboBox();
-        selDimension.addItem("5 x 5");
-        selDimension.addItem("6 x 6");
-        selDimension.addItem("7 x 7");
+        for(int i = 0; i < Main.DIMENSIONS.length; i++)
+            selDimension.addItem(Main.DIMENSIONS[i] + " x " + Main.DIMENSIONS[i]);
+        selDimension.setToolTipText("<html>Thinking time grows steeply with board size.<br>"
+            + "8x8 and 9x9 are comfortable on Normal, but take<br>"
+            + "minutes per move on Expert and Master.</html>");
+        selDimension.setSelectedIndex(restoreIndex(GamePrefs.DIMENSION,
+            Main.DEFAULT_DIMENSION_INDEX, selDimension.getItemCount()));
 
         selDifficulty = new JComboBox();
         selDifficulty.addItem("Normal Mode (Level 1)");
         selDifficulty.addItem("Expert Mode (Level 2)");
         selDifficulty.addItem("Master Mode (Level 3)");
+        selDifficulty.setSelectedIndex(restoreIndex(GamePrefs.DIFFICULTY, 0, selDifficulty.getItemCount()));
 
-        JLabel lblDimension = new JLabel("Dimension: ");
-        JLabel lblDifficulty = new JLabel("Difficulty: ");
+        JLabel lblDimension = new JLabel("Dimension:");
+        JLabel lblDifficulty = new JLabel("Difficulty:");
         enableSwap = new JCheckBox("Enable swap rule");
-        enableSwap.setSelected(true);
+        enableSwap.setSelected(GamePrefs.get(GamePrefs.SWAP, true));
 
-        options.add(lblDimension);
-        options.add(selDimension);
-        options.add(lblDifficulty);
-        options.add(selDifficulty);
-        options.add(enableSwap);
-        vertical.add(v1); 
+        selAlgorithm = new JComboBox();
+        selAlgorithm.addItem("Object-Oriented H-Search");
+        selAlgorithm.addItem("Bitmap H-Search");
+        selAlgorithm.setToolTipText("Both play identical moves; Bitmap H-Search analyzes ~5x faster (boards up to 11x11).");
+        selAlgorithm.setSelectedIndex(restoreIndex(GamePrefs.ALGORITHM, 1, selAlgorithm.getItemCount()));
+
+        JLabel lblAlgorithm = new JLabel("Algorithm:");
+
+        /* Two-column grid: right-aligned labels, fields stretching to the
+         * panel edge, one row per option. */
+        options.setLayout(new GridBagLayout());
+
+        GridBagConstraints label = new GridBagConstraints();
+        label.gridx = 0;
+        label.anchor = GridBagConstraints.LINE_END;
+        label.insets = new Insets(3, 10, 3, 6);
+
+        GridBagConstraints field = new GridBagConstraints();
+        field.gridx = 1;
+        field.fill = GridBagConstraints.HORIZONTAL;
+        field.weightx = 1.0;
+        field.insets = new Insets(3, 0, 3, 10);
+
+        label.gridy = field.gridy = 0;
+        options.add(lblDimension, label);
+        options.add(selDimension, field);
+
+        label.gridy = field.gridy = 1;
+        options.add(lblDifficulty, label);
+        options.add(selDifficulty, field);
+
+        label.gridy = field.gridy = 2;
+        options.add(lblAlgorithm, label);
+        options.add(selAlgorithm, field);
+
+        GridBagConstraints check = new GridBagConstraints();
+        check.gridx = 0;
+        check.gridy = 3;
+        check.gridwidth = 2;
+        check.anchor = GridBagConstraints.LINE_START;
+        check.insets = new Insets(3, 10, 3, 10);
+        options.add(enableSwap, check);
+        vertical.add(v1);
         vertical.add(v2);
         horizontal.add(h1);
         horizontal.add(h2);
     }
-    
+
+    /** Returns a stored combo index, falling back to the default when the
+     *  stored value does not fit the current item count
+     *  @param key Preference key
+     *  @param def Default index
+     *  @param itemCount Number of items in the combo */
+    private static int restoreIndex(String key, int def, int itemCount){
+        int index = GamePrefs.get(key, def);
+        if(index < 0 || index >= itemCount) return def;
+        return index;
+    }
+
     /** Class to listen for the accept button press */
     class AcceptHandler implements ActionListener{
         public void actionPerformed(ActionEvent e){
@@ -123,19 +218,21 @@ class OptionsDialog extends JDialog{
             if(h1.isSelected()) h = 0;
             else h = 1;
 
-            switch(selDimension.getSelectedIndex()){
-            case 0:
-                dim = 5;
-                break;
-            case 1:
-                dim = 6;
-                break;
-            default:
-                dim = 7;
-            }
+            dim = Main.DIMENSIONS[selDimension.getSelectedIndex()];
 
             // Get difficulty level (1, 2, or 3)
             difficulty = selDifficulty.getSelectedIndex() + 1;
+
+            /* Must be set before the new Match (and its Simulations/Paths)
+             * is created; safe to toggle here because newGame builds a
+             * fresh engine and board. */
+            heuristics.OptConfig.USE_BITPATH = (selAlgorithm.getSelectedIndex() == 1);
+
+            // Remember the selections for the next game and the next session
+            GamePrefs.put(GamePrefs.DIMENSION, selDimension.getSelectedIndex());
+            GamePrefs.put(GamePrefs.DIFFICULTY, selDifficulty.getSelectedIndex());
+            GamePrefs.put(GamePrefs.ALGORITHM, selAlgorithm.getSelectedIndex());
+            GamePrefs.put(GamePrefs.SWAP, enableSwap.isSelected());
 
             dispose();
             game.newGame(dim, v, h, enableSwap.isSelected(), difficulty);
@@ -188,12 +285,20 @@ class GameWindow extends JFrame{
     private GameWindow yo;
     private JMenu[] menus;
     private BoardPanel board;
-    private JPanel statusBar;
+    private StatusBar statusBar;
+    private double layoutHOff, layoutVOff;   // Cell geometry, for the analysis overlay
+
+    /** Minimum gap between live repaints while the engine searches. Low
+     *  enough to look continuous, high enough that drawing does not eat
+     *  into the search. */
+    private static final long PROGRESS_PAINT_MS = 80;
     private CellHandler g[][];
     private JButton b[][];
     private Icon red, blue, suggestion;
+    private Icon redLast, blueLast;     // Darker variants marking the most recent stone
     private Icon ic_turn;
-    private JLabel text;
+    private JButton lastStoneButton;    // Button holding the most recent stone
+    private Icon lastStoneIcon;         // Normal-color icon to restore on that button
     private JButton swap;
     
     private Player turn;
@@ -210,11 +315,12 @@ class GameWindow extends JFrame{
      *  @param dim      Board dimension of the new game
      *  @param typeV    Type of the vertical player
      *  @param typeH    Type of the horizontal player
-     *  @param swap     True if the swap rule is enabled, false otherwise */
-    public GameWindow(int dimension, int tipoVertical, int tipoHorizontal, boolean swap){
+     *  @param swap     True if the swap rule is enabled, false otherwise
+     *  @param difficulty Difficulty level (1 = Normal, 2 = Expert, 3 = Master) */
+    public GameWindow(int dimension, int tipoVertical, int tipoHorizontal, boolean swap, int difficulty){
         Dimension = dimension;
         yo = this;
-        newGame(dimension, tipoVertical, tipoHorizontal, swap, 1);
+        newGame(dimension, tipoVertical, tipoHorizontal, swap, difficulty);
         setResizable(false);
         setTitle("Hexodus");
     }
@@ -228,66 +334,57 @@ class GameWindow extends JFrame{
     public void newGame(int dim, int typeV, int typeH, boolean swap, int difficulty){
         Dimension = dim;
         
-        int width, height;
-        int horizontalOffset, verticalOffset;
-        int widthSize, heightSize;
-        double horizontalIncrement, verticalIncrement;
-        double offset;
-        
-        switch(Dimension){
-            case 5:
-                width = 529;
-                height = 423;
-                horizontalOffset = 178;
-                verticalOffset = 66;
-                widthSize = 50;
-                heightSize = 45;
-                horizontalIncrement = 11;
-                verticalIncrement = 7;
-                offset = 30.5;
-                break;
-            case 6:
-                width = 620;
-                height = 480;
-                horizontalOffset = 210;
-                verticalOffset = 67;
-                widthSize = 50;
-                heightSize = 45;
-                horizontalIncrement = 11;
-                verticalIncrement = 7.5;
-                offset = 30.5;
-                break;                
-            default:
-                width = 710;
-                height = 530;
-                horizontalOffset = 240;
-                verticalOffset = 68;
-                widthSize = 50;
-                heightSize = 45;                
-                horizontalIncrement = 11;
-                verticalIncrement = 7.5;                
-                offset = 30.5;
-        }
+        /* Board artwork is generated from one geometry (tools/BoardStyles.java):
+         * pointy-top hexagons of radius R = 61/sqrt(3), horizontal pitch 61,
+         * vertical pitch 52.5, each row shifted 30.5 to the left, and a 20px
+         * margin around the board for the coloured frame. The window layout
+         * therefore follows from the dimension instead of a per-size table,
+         * so any board size lines up automatically. */
+        final double CELL_R = 61.0 / Math.sqrt(3.0);   // 35.22
+        final double ART_MARGIN = 20.0;
+        final int CHROME_W = 88;   // window width beyond the artwork
+        final int CHROME_H = 137;  // title bar + status bar + bottom margin
+        final int ART_TOP = 50;    // where BoardPanel draws the artwork
+
+        int artWidth  = (int)Math.round(91.5 * (dim - 1) + 61.0 + 2 * ART_MARGIN);
+        int artHeight = (int)Math.round(52.5 * (dim - 1) + 2 * CELL_R + 2 * ART_MARGIN);
+
+        int width  = artWidth + CHROME_W;
+        int height = artHeight + CHROME_H;
+
+        int widthSize = 50, heightSize = 45;          // clickable cell button
+        double horizontalIncrement = 11, verticalIncrement = 7.5;  // pitch = size + increment
+        double offset = 30.5;                          // per-row leftward shift
+
+        /* Artwork is centred horizontally by BoardPanel, so its left edge sits
+         * at CHROME_W / 2. Cell (0,0)'s centre is ART_MARGIN + 30.5*dim from
+         * that edge; the button is positioned by its top-left corner. */
+        double horizontalOffset = (CHROME_W / 2) + (30.5 * dim + ART_MARGIN) - (widthSize / 2.0);
+        double verticalOffset = ART_TOP + (CELL_R + ART_MARGIN) - (heightSize / 2.0);
+
         setSize(width, height);
         
         firstMove = true;         
         board = new BoardPanel(Dimension, width);
         
         board.setLayout(null);
-        board.setBackground(Color.white);
+        board.setBackground(Main.BACKGROUND);
         setContentPane(board);
         
-        statusBar = new JPanel();
-        statusBar.setBackground(Color.white);
-        statusBar.setBounds(0, 5, width, 40);
+        layoutHOff = horizontalOffset;
+        layoutVOff = verticalOffset;
+        installAnalysisListener();
 
+        statusBar = new StatusBar(width);
+        statusBar.setBounds(0, 5, width, 34);
         board.add(statusBar);
-        
-        text = new JLabel();
-        statusBar.add(text);
         red = new ImageIcon(ClassLoader.getSystemResource("images/red.png"));
         blue = new ImageIcon(ClassLoader.getSystemResource("images/blue.png"));
         suggestion = new ImageIcon(ClassLoader.getSystemResource("images/sug.png"));
+        redLast = darken(red);
+        blueLast = darken(blue);
+        lastStoneButton = null;
+        lastStoneIcon = null;
 
         b = new JButton [Dimension][Dimension];
 
@@ -309,7 +406,13 @@ class GameWindow extends JFrame{
         
         menus = new JMenu[] {new JMenu("Game"), new JMenu("Hexodus"), new JMenu("Help")};
         JMenuItem[] gameMenu = {new JMenuItem("New Game...")};
-        JMenuItem[] hexodus = {new JMenuItem("Suggest Move"), new JRadioButtonMenuItem("Normal Mode"), new JRadioButtonMenuItem("Expert Mode"), new JRadioButtonMenuItem("Master Mode")};
+        JCheckBoxMenuItem showThinking = new JCheckBoxMenuItem("Show AI Thinking");
+        showThinking.setToolTipText("<html>Tints every move the engine scored, strongest for the<br>"
+            + "ones it rated best. Untinted cells were pruned by the search.</html>");
+        showThinking.setSelected(GamePrefs.get(GamePrefs.SHOW_THINKING, false));
+        heuristics.Analysis.ENABLED = showThinking.isSelected();
+
+        JMenuItem[] hexodus = {new JMenuItem("Suggest Move"), new JRadioButtonMenuItem("Normal Mode"), new JRadioButtonMenuItem("Expert Mode"), new JRadioButtonMenuItem("Master Mode"), showThinking};
         JMenuItem[] helpMenu = {new JMenuItem("About...")};
 
         ButtonGroup difficultyGroup = new ButtonGroup();
@@ -323,7 +426,7 @@ class GameWindow extends JFrame{
         }
         for(int i = 0; i < hexodus.length; i++){
             menus[1].add(hexodus[i]);
-            if(i == 0)menus[1].add(new JSeparator());
+            if(i == 0 || i == 3) menus[1].add(new JSeparator());
             hexodus[i].addActionListener(new MenuHandler(1, i));
         }
         for(int i = 0; i < helpMenu.length; i++){
@@ -391,13 +494,18 @@ class GameWindow extends JFrame{
         switch(id){
             case 0:
                 disable();
-                status = "Hexodus is thinking...";
+                status = "Analysing position\u2026";
+                statusBar.setTurn(turn == playerOne, "Hexodus thinking");
                 break;
             default:
                 enable();
-                status = "";
+                /* Leaves the message alone: it usually holds the timing of
+                 * the move just played, which is worth keeping on screen. */
+                status = null;
+                if(turn != null) statusBar.setTurn(turn == playerOne,
+                    turn.getType() == 0 ? "Your turn" : "Hexodus");
         }
-        text.setText(status);
+        if(status != null) statusBar.setMessage(status);
         
         Graphics gf = getGraphics();
         if (gf != null) paintComponents(gf);
@@ -407,7 +515,7 @@ class GameWindow extends JFrame{
     /** Changes the status shown in the upper status bar text
      *  @param  status String with the new status */
     public void changeStatus(String status){
-        text.setText(status);
+        statusBar.setMessage(status);
         
         Graphics gf = getGraphics();
         if (gf != null) paintComponents(gf);
@@ -419,10 +527,14 @@ class GameWindow extends JFrame{
      *  @param t player for whom the move is suggested */
     public void suggestMove(Player t){
         changeStatus(0);
+        long startTime = System.currentTimeMillis();
         suggested = p.generateMove(t);
+        long thinkingTime = System.currentTimeMillis() - startTime;
 
         b[suggested[1]][suggested[0]].setIcon(suggestion);
         changeStatus(-1);
+        changeStatus("Suggested (" + suggested[0] + "," + suggested[1] + ") in " + thinkingTime + "ms");
+        if(board != null) board.repaint();   // show the reasoning behind the suggestion
     }
     
     /** Removes the last suggested move from the board */
@@ -432,6 +544,88 @@ class GameWindow extends JFrame{
         suggested = null;
     }
     
+    /** Makes the board follow the engine's search as it happens.
+     *
+     *  The search runs on the event thread, so ordinary repaint requests
+     *  would only be serviced once it finished and the board would sit
+     *  frozen. Painting synchronously from the engine's own progress
+     *  callback draws each update immediately instead. Repaints are
+     *  throttled so the drawing does not noticeably slow the search. */
+    private void installAnalysisListener(){
+        heuristics.Analysis.setListener(new Runnable(){
+            private long lastPaint = 0;
+
+            public void run(){
+                if(board == null || !board.isShowing()) return;
+                if(!SwingUtilities.isEventDispatchThread()) return;  // worker thread: skip
+
+                long now = System.currentTimeMillis();
+                boolean done = !heuristics.Analysis.isSearching();
+                if(!done && now - lastPaint < PROGRESS_PAINT_MS) return;
+                lastPaint = now;
+
+                if(heuristics.Analysis.isSearching()){
+                    statusBar.setMessage("Analysing position… " +
+                        heuristics.Analysis.getEvaluated() + " of " +
+                        heuristics.Analysis.getCandidates() + " moves examined");
+                    statusBar.refreshNow();
+                }
+                board.paintImmediately(0, 0, board.getWidth(), board.getHeight());
+            }
+        });
+    }
+
+    /** Returns a slightly darker copy of an icon, used to highlight the
+     *  most recently placed stone.
+     *  @param src Source icon
+     *  @return Darkened copy */
+    private Icon darken(Icon src){
+        BufferedImage img = new BufferedImage(src.getIconWidth(), src.getIconHeight(),
+            BufferedImage.TYPE_INT_ARGB);
+        Graphics2D gr = img.createGraphics();
+        src.paintIcon(null, gr, 0, 0);
+        gr.dispose();
+
+        /* Scale the darkening by how far each pixel is from white, so the
+         * stone darkens fully while anything near-white is left alone.
+         * The stone images are transparent (tools/StoneGen.java), so this
+         * mainly keeps the anti-aliased rim smooth; it also means the
+         * effect stays correct if an opaque-background icon is ever used
+         * again, which would otherwise gain a grey box. */
+        final double factor = 0.72;
+        for(int y = 0; y < img.getHeight(); y++){
+            for(int x = 0; x < img.getWidth(); x++){
+                int argb = img.getRGB(x, y);
+                int a = (argb >>> 24);
+                int r = (argb >> 16) & 0xFF;
+                int g = (argb >> 8) & 0xFF;
+                int b = argb & 0xFF;
+
+                int min = Math.min(r, Math.min(g, b));
+                double weight = (255 - min) / 255.0;     // 0 for white, ~1 for the stone
+                double f = 1.0 - (1.0 - factor) * weight;
+
+                img.setRGB(x, y, (a << 24) | ((int)(r * f) << 16)
+                    | ((int)(g * f) << 8) | (int)(b * f));
+            }
+        }
+        return new ImageIcon(img);
+    }
+
+    /** Places a stone of the current turn's color on the board, marking it
+     *  with the darker "last move" variant and restoring the previous last
+     *  stone to its normal color.
+     *  @param col Button column index (first index into b)
+     *  @param row Button row index (second index into b) */
+    private void placeStone(int col, int row){
+        if(lastStoneButton != null)
+            lastStoneButton.setIcon(lastStoneIcon);
+
+        b[col][row].setIcon(ic_turn == red ? redLast : blueLast);
+        lastStoneButton = b[col][row];
+        lastStoneIcon = ic_turn;
+    }
+
     /** Generates a move if the swap rule is enabled
      *  @param turn Player in possession of the turn */
     public void generateSwapMove(Player turn){
@@ -441,14 +635,14 @@ class GameWindow extends JFrame{
         move = p.generateMove(turn);
         long thinkingTime = System.currentTimeMillis() - startTime;
 
-        b[move[1]][move[0]].setIcon(ic_turn);
+        placeStone(move[1], move[0]);
         changeStatus("First move (" + move[0] + "," + move[1] + ") calculated in " + thinkingTime + "ms");
 
         swap = new JButton();
         swap.setContentAreaFilled(false);
         swap.setText("Swap Move");
         swap.addActionListener(new SwapButtonHandler());
-        statusBar.add(swap);
+        statusBar.addControl(swap);
 
         f = move[0];
         c = move[1];
@@ -471,10 +665,12 @@ class GameWindow extends JFrame{
         move = p.generateMove(turn);
         long thinkingTime = System.currentTimeMillis() - startTime;
 
+        if(board != null) board.repaint();   // refresh the analysis overlay
+
         // Show timing in status bar
         changeStatus("Move (" + move[0] + "," + move[1] + ") calculated in " + thinkingTime + "ms");
 
-        b[move[1]][move[0]].setIcon(ic_turn);
+        placeStone(move[1], move[0]);
         g[move[1]][move[0]].setAllowed(false);
         try {
             winner = p.newMove(move[0], move[1], turn);
@@ -517,7 +713,8 @@ class GameWindow extends JFrame{
             }
         }
         disable();
-        text.setText("Winner: " + winner.getName());
+        statusBar.setMessage("");
+        statusBar.clearTurn(winner.getName() + " wins");
     }
     
     /** Removes the special handlers for the swap move and
@@ -558,7 +755,8 @@ class GameWindow extends JFrame{
         } while(winner == null);
         
         disable();
-        text.setText("Winner: " + winner.getName());
+        statusBar.setMessage("");
+        statusBar.clearTurn(winner.getName() + " wins");
     }
     
     /** Subclass to represent the panel with the board */
@@ -592,10 +790,84 @@ class GameWindow extends JFrame{
                 int imheight = backgroundImage.getHeight(null);
                 
                 // displays the centered board image.
-                if((imwidth > 0) && (imheight > 0)){                
+                if((imwidth > 0) && (imheight > 0)){
                     g.drawImage(backgroundImage, width / 2 - imwidth / 2, 50, null);
                 }
             }
+
+            if(heuristics.Analysis.isAvailable()) paintAnalysis((Graphics2D) g);
+        }
+
+        /** Paints the engine's reasoning over the board: every candidate the
+         *  search actually scored is tinted in the moving player's colour,
+         *  strongest for the moves it liked best. Cells left untinted were
+         *  pruned by alpha-beta — the search never looked at them. The move
+         *  finally played is ringed. */
+        private void paintAnalysis(Graphics2D g2){
+            double[][] scores = heuristics.Analysis.getScores();
+            int n = scores.length;
+            if(n != Dimension) return;
+
+            boolean maximizing = (heuristics.Analysis.getMover() == 1);
+            /* The soft border hues rather than the stone colours: this is a
+             * wash over the board and must stay behind the pieces. */
+            Color tint = maximizing ? Theme.RED_SOFT : Theme.BLUE_SOFT;
+
+            // Rank the examined scores; ranking survives the 0 / infinity extremes
+            java.util.ArrayList<Double> seen = new java.util.ArrayList<Double>();
+            for(int i = 0; i < n; i++)
+                for(int j = 0; j < n; j++)
+                    if(!Double.isNaN(scores[i][j])) seen.add(Double.valueOf(scores[i][j]));
+            if(seen.isEmpty()) return;
+            java.util.Collections.sort(seen);
+
+            Graphics2D g = (Graphics2D) g2.create();
+            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            for(int row = 0; row < n; row++){
+                for(int col = 0; col < n; col++){
+                    double s = scores[row][col];
+                    if(Double.isNaN(s)) continue;
+
+                    // Fraction of examined moves this one is better than
+                    int rank = java.util.Collections.binarySearch(seen, Double.valueOf(s));
+                    if(rank < 0) rank = -rank - 1;
+                    double t = (seen.size() == 1) ? 1.0 : rank / (double)(seen.size() - 1);
+                    if(!maximizing) t = 1.0 - t;   // Minimising player prefers low scores
+
+                    int alpha = (int)Math.round(10 + 72 * t * t);
+                    g.setColor(new Color(tint.getRed(), tint.getGreen(), tint.getBlue(), alpha));
+                    g.fill(cellShape(row, col, 25));
+                }
+            }
+
+            /* Ring the leading move: dashed while the search is still
+             * running (it may yet be beaten), solid once decided. */
+            int br = heuristics.Analysis.getBestRow(), bc = heuristics.Analysis.getBestColumn();
+            if(br >= 0 && bc >= 0){
+                g.setColor(new Color(tint.getRed(), tint.getGreen(), tint.getBlue(), 190));
+                if(heuristics.Analysis.isSearching())
+                    g.setStroke(new BasicStroke(1.8f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND,
+                        10f, new float[]{5f, 4f}, 0f));
+                else
+                    g.setStroke(new BasicStroke(2.0f));
+                g.draw(cellShape(br, bc, 26));
+            }
+            g.dispose();
+        }
+
+        /** Hexagon outline of one cell, in panel coordinates */
+        private Shape cellShape(int row, int col, double radius){
+            double cx = layoutHOff + 61.0 * col - 30.5 * row + 25;
+            double cy = layoutVOff + 52.5 * row + 22.5;
+            java.awt.geom.Path2D p = new java.awt.geom.Path2D.Double();
+            for(int k = 0; k < 6; k++){
+                double ang = Math.toRadians(-90 + 60 * k);
+                double x = cx + radius * Math.cos(ang), y = cy + radius * Math.sin(ang);
+                if(k == 0) p.moveTo(x, y); else p.lineTo(x, y);
+            }
+            p.closePath();
+            return p;
         }
     }
     
@@ -644,6 +916,16 @@ class GameWindow extends JFrame{
                     } catch (IncorrectLevel ex) {
                         ex.printStackTrace();
                     }
+                    break;
+                case 4:
+                    /* Show AI Thinking: the engine only records its reasoning
+                     * while this is on, so the overlay appears from the next
+                     * computed move onward. */
+                    boolean on = ((JCheckBoxMenuItem) e.getSource()).isSelected();
+                    heuristics.Analysis.ENABLED = on;
+                    GamePrefs.put(GamePrefs.SHOW_THINKING, on);
+                    if(!on) heuristics.Analysis.clear();
+                    repaint();
                     break;
                 }
                 break;
@@ -708,7 +990,10 @@ class GameWindow extends JFrame{
             if(allowed){
                 removeSuggestedMove();
                 allowed = false;
-                b[column][row].setIcon(ic_turn);
+                /* The recorded analysis describes the position before this
+                 * move, so drop it rather than leave a stale overlay. */
+                heuristics.Analysis.clear();
+                placeStone(column, row);
 
                 // Forces the redraw
                 Graphics gf = getGraphics();
@@ -752,7 +1037,7 @@ class GameWindow extends JFrame{
                 removeSuggestedMove();
                 if(firstMove){    // It is the first time this handler is used
                     disable();
-                    b[column][row].setIcon(ic_turn);
+                    placeStone(column, row);
                     allowed = false;
 
                     f = row;
@@ -772,7 +1057,7 @@ class GameWindow extends JFrame{
                             }
                             changeStatus("Hexodus has swapped the move");
                             changeTurn();
-                            b[c][f].setIcon(ic_turn);
+                            placeStone(c, f);
 
                             try {
                                 p.newMove(f, c, turn);
@@ -806,7 +1091,7 @@ class GameWindow extends JFrame{
                         swap.setContentAreaFilled(false);
                         swap.setText("Swap Move");
                         swap.addActionListener(new SwapButtonHandler());
-                        statusBar.add(swap);
+                        statusBar.addControl(swap);
                     }
                 }  
                 else{ /* If it is not the first time the handler is executed, it means
@@ -814,7 +1099,7 @@ class GameWindow extends JFrame{
                     try {
                         p.newMove(f, c, turn);
                         changeTurn();
-                        b[column][row].setIcon(ic_turn);
+                        placeStone(column, row);
                         p.newMove(row, column, turn);
                     }catch (OccupiedSquare ex) {
                         System.out.println("Occupied");
@@ -841,7 +1126,7 @@ class GameWindow extends JFrame{
     class SwapButtonHandler implements ActionListener{
         public void actionPerformed(ActionEvent e){
             changeTurn();
-            b[c][f].setIcon(ic_turn);
+            placeStone(c, f);
 
             try{
                 p.newMove(f, c, turn);

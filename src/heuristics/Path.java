@@ -3,18 +3,31 @@ package heuristics;
 import java.util.*;
 
 /**
- *  Represents a path composed of cells
+ *  Represents a path composed of cells.
+ *
+ *  Two internal representations are supported: the original ArrayList of
+ *  Cells, and (when OptConfig.USE_BITPATH is active) a 128-bit mask (two
+ *  long words) indexed by cell id, which turns contains/intersection/
+ *  union/equals into a couple of bitwise operations. The mask
+ *  representation supports boards up to 11x11 (121 squares + 4 borders =
+ *  125 ids) and does not support iterating the cells of a path.
+ *
  *  @author Pau
  *  @version 1.0
  */
 public class Path {
-    private ArrayList <Cell> list;      // An ArrayList of Cells in the path
+    private ArrayList <Cell> list;      // An ArrayList of Cells in the path (null in bitmask mode)
+    private long maskLo;                // Bits for cell ids 0-63 (bitmask mode)
+    private long maskHi;                // Bits for cell ids 64-127 (bitmask mode)
     private boolean direct;             // Indicates if the path is direct type []
     private boolean newPath;            // Indicates if the path is new or not
 
     /** Creates a new Path */
     public Path() {
-        list = new ArrayList();
+        if(!OptConfig.USE_BITPATH)
+            list = new ArrayList();
+        maskLo = 0L;
+        maskHi = 0L;
         direct = false;     // Initially defined as NOT direct path
         newPath = true;     // Marked as new
     }
@@ -22,6 +35,16 @@ public class Path {
     /** Adds a cell to the path if it doesn't exist
      *  @param cell Cell to add to the path */
     public void add(Cell cell){
+        if(OptConfig.USE_BITPATH){
+            int id = cell.getId();
+            if(id < 64)
+                maskLo |= (1L << id);
+            else if(id < 128)
+                maskHi |= (1L << (id - 64));
+            else // Fail loudly instead of silently colliding bits
+                throw new IllegalStateException("USE_BITPATH supports boards up to 11x11 (cell id " + id + ")");
+            return;
+        }
         if(!list.contains(cell))
             list.add(cell);
     }
@@ -41,6 +64,8 @@ public class Path {
     /** Returns the path length based on the number of cells
      *  @return Path length (number of cells it contains) */
     public int getLength(){
+        if(OptConfig.USE_BITPATH)
+            return Long.bitCount(maskLo) + Long.bitCount(maskHi);
         return list.size();
     }
 
@@ -48,6 +73,12 @@ public class Path {
      *  @param target Target cell
      *  @return True if cell 'target' is in the path, false otherwise */
     public boolean contains(Cell target){
+        if(OptConfig.USE_BITPATH){
+            int id = target.getId();
+            if(id < 64)
+                return (maskLo & (1L << id)) != 0;
+            return (maskHi & (1L << (id - 64))) != 0;
+        }
         return list.contains(target);
     }
 
@@ -56,6 +87,9 @@ public class Path {
      *  @param other Path to compare with the current one
      *  @return True if the intersection of both is null, false otherwise */
     public boolean hasEmptyIntersection(Path other){
+        if(OptConfig.USE_BITPATH)
+            return ((maskLo & other.maskLo) == 0) && ((maskHi & other.maskHi) == 0);
+
         Iterator i1 = list.iterator();
 
         while(i1.hasNext())
@@ -70,6 +104,13 @@ public class Path {
      *  received by arguments. */
     public Path intersection(Path other){
         Path newPath = new Path();
+
+        if(OptConfig.USE_BITPATH){
+            newPath.maskLo = maskLo & other.maskLo;
+            newPath.maskHi = maskHi & other.maskHi;
+            return newPath;
+        }
+
         Cell square = null;
 
         Iterator <Cell> i1 = list.iterator();
@@ -94,6 +135,12 @@ public class Path {
             return newPath;
         }
 
+        if(OptConfig.USE_BITPATH){
+            newPath.maskLo = maskLo | other.maskLo;
+            newPath.maskHi = maskHi | other.maskHi;
+            return newPath;
+        }
+
         Iterator i1 = list.iterator();
         while(i1.hasNext()){
             newPath.add((Cell) i1.next());
@@ -115,6 +162,13 @@ public class Path {
     public Path union(Path other, Cell cell){
         Path newPath = new Path();
 
+        if(OptConfig.USE_BITPATH){
+            newPath.maskLo = maskLo | other.maskLo;
+            newPath.maskHi = maskHi | other.maskHi;
+            newPath.add(cell);
+            return newPath;
+        }
+
         Iterator <Cell> i1 = list.iterator();
         while(i1.hasNext()){
             newPath.add(i1.next());
@@ -135,19 +189,27 @@ public class Path {
      *  considered empty
      *  @return True if the path is empty or direct. False otherwise. */
     public boolean isEmpty(){
+        if(OptConfig.USE_BITPATH)
+            return (maskLo | maskHi) == 0L;
         return list.isEmpty();
     }
 
-    /** Returns a path iterator
+    /** Returns a path iterator. Not supported in bitmask mode (returns an
+     *  empty iterator), where paths are not enumerable.
      *  @return An Iterator object over the Cell list
      */
     public Iterator getIterator(){
+        if(list == null)
+            return Collections.emptyList().iterator();
         return list.iterator();
     }
 
     /** Marks the direct attribute as true */
     public void makeDirect(){
-        list.clear();
+        if(list != null)
+            list.clear();
+        maskLo = 0L;
+        maskHi = 0L;
         direct = true;
     }
 
@@ -165,6 +227,10 @@ public class Path {
      *  @return True if the paths are equal, false otherwise */
     public boolean equals(Path other){
         if(this.direct && other.direct) return true;
+
+        if(OptConfig.USE_BITPATH)
+            return (maskLo == other.maskLo) && (maskHi == other.maskHi);
+
         if(other.getLength() != this.getLength()) return false;
 
         Iterator <Cell> i1 = list.iterator();
@@ -177,6 +243,7 @@ public class Path {
 
     /** ... */
     public String toString(){
+        if(list == null) return "[mask:" + Long.toBinaryString(maskHi) + ":" + Long.toBinaryString(maskLo) + "]";
         if(list.isEmpty()) return "[]";
         Iterator e = list.iterator();
         String s = new String();

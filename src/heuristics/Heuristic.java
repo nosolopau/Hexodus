@@ -62,12 +62,100 @@ public abstract class Heuristic {
         else return false;
     }
 
+    /** Best-effort move for decided positions: when no move improves the
+     *  search bounds (the opponent's win is proven, every move evaluates
+     *  the same), rank the free cells by the player's own resistance and
+     *  play the most connective one — the losing side keeps building its
+     *  best threat instead of playing randomly.
+     *  @param base Simulation of the current position
+     *  @param color Player to move
+     *  @return The free square minimizing the player's own resistance,
+     *  or null if there are no free squares */
+    protected Square bestFallbackMove(Simulation base, int color){
+        ArrayList<Square> free = base.getFreeCells();
+        Square best = null;
+        double bestR = Double.POSITIVE_INFINITY;
+
+        for(int i = 0; i < free.size(); i++){
+            Square c = free.get(i);
+            Simulation n = new Simulation(base, c, color);
+            double r = n.calculateOwnResistance(color);
+            n.restore();
+            if(best == null || r < bestR){
+                best = c;
+                bestR = r;
+            }
+        }
+        return best;
+    }
+
     /** Sorts moves by proximity to a target square for better alpha-beta pruning.
      *  Moves closer to the target are evaluated first, improving cutoff rates.
      *  @param moves List of candidate moves to sort
      *  @param target The reference square (typically the last move played) */
     protected void sortByProximity(ArrayList<Square> moves, Square target) {
         sortByProximityAndKillers(moves, target, null);
+    }
+
+    /** Hex distance between two squares on this board's adjacency
+     *  (neighbors: row/column steps plus the (+1,+1)/(-1,-1) diagonal) */
+    private static int hexDistance(int r1, int c1, int r2, int c2){
+        int dr = r1 - r2;
+        int dc = c1 - c2;
+        if((dr >= 0) == (dc >= 0))
+            return Math.max(Math.abs(dr), Math.abs(dc));
+        return Math.abs(dr) + Math.abs(dc);
+    }
+
+    /** Sorts moves by killers first, then by distance to the nearest
+     *  occupied square (locality), with distance to the last move as
+     *  tiebreak. Every move stays in the list — ordering only — so the
+     *  search result is unchanged; good moves in hex cluster around the
+     *  existing stones, which improves alpha-beta cutoffs.
+     *  @param moves List of candidate moves to sort
+     *  @param s Simulation providing the board (for stone positions)
+     *  @param killers Array of killer moves to prioritize [0=primary, 1=secondary] */
+    protected void sortByLocalityAndKillers(ArrayList<Square> moves, Simulation s, final Square[] killers) {
+        ArrayList<Square> stones = new ArrayList<Square>();
+        s.getBoard().getOccupiedInto(stones);
+        Square target = s.getTargetCell();
+        final int targetRow = (target != null) ? target.getRow() : -1;
+        final int targetCol = (target != null) ? target.getColumn() : -1;
+
+        /* Precompute a composite key per candidate: distance to the nearest
+         * stone (dominant) and distance to the last move (tiebreak) */
+        final HashMap<Square, Integer> rank = new HashMap<Square, Integer>();
+        for(int i = 0; i < moves.size(); i++){
+            Square m = moves.get(i);
+            int nearest = Integer.MAX_VALUE;
+            for(int j = 0; j < stones.size(); j++){
+                Square st = stones.get(j);
+                int d = hexDistance(m.getRow(), m.getColumn(), st.getRow(), st.getColumn());
+                if(d < nearest) nearest = d;
+            }
+            if(nearest == Integer.MAX_VALUE) nearest = 0;  // Empty board: all equal
+            int tiebreak = (target != null)
+                ? hexDistance(m.getRow(), m.getColumn(), targetRow, targetCol) : 0;
+            rank.put(m, Integer.valueOf(nearest * 1000 + tiebreak));
+        }
+
+        Collections.sort(moves, new Comparator<Square>() {
+            public int compare(Square s1, Square s2) {
+                if (killers != null) {
+                    boolean s1IsKiller = (s1.equals(killers[0]) || s1.equals(killers[1]));
+                    boolean s2IsKiller = (s2.equals(killers[0]) || s2.equals(killers[1]));
+
+                    if (s1IsKiller && !s2IsKiller) return -1;
+                    if (s2IsKiller && !s1IsKiller) return 1;
+                    if (s1IsKiller && s2IsKiller) {
+                        if (s1.equals(killers[0])) return -1;
+                        if (s2.equals(killers[0])) return 1;
+                        return 0;
+                    }
+                }
+                return rank.get(s1).intValue() - rank.get(s2).intValue();
+            }
+        });
     }
 
     /** Sorts moves by killer moves first, then proximity to target.
@@ -139,6 +227,30 @@ class SingleThread extends Heuristic{
         base = newSim;
     }
 
+    /** Orders root moves by a shallow (depth-0) evaluation so the most
+     *  promising options are searched first, improving alpha-beta cutoffs.
+     *  Used instead of proximity ordering when OptConfig.USE_ROOT_PRESORT
+     *  is active.
+     *  @param moves List of candidate root moves to sort
+     *  @param s Simulation representing the current position
+     *  @param maximizing True when ordering for the maximizing player */
+    private void presortByShallowEval(ArrayList<Square> moves, Simulation s, final boolean maximizing){
+        final HashMap<Square, Double> scores = new HashMap<Square, Double>();
+        for(int i = 0; i < moves.size(); i++){
+            Square c = moves.get(i);
+            Simulation n = new Simulation(s, c, maximizing ? 1 : 0);
+            scores.put(c, Double.valueOf(n.calculateValue()));
+            n.restore();
+        }
+        Collections.sort(moves, new Comparator<Square>() {
+            public int compare(Square a, Square b) {
+                double va = scores.get(a).doubleValue();
+                double vb = scores.get(b).doubleValue();
+                return maximizing ? Double.compare(vb, va) : Double.compare(va, vb);
+            }
+        });
+    }
+
     /** Generates a random legal move among available ones
      *  @return The square on which the random move is executed */
     private Square generateRandomMove(){
@@ -162,6 +274,8 @@ class SingleThread extends Heuristic{
             ", color=" + (color == 1 ? "VERTICAL" : "HORIZONTAL") +
             ", free cells=" + base.getFreeCells().size() + ")");
 
+        if(Analysis.ENABLED) Analysis.begin(dimension, color, base.getFreeCells().size());
+
         Square best = null;
         bestMax = null;
         bestMin = null;
@@ -178,17 +292,26 @@ class SingleThread extends Heuristic{
             best = bestMin;
         }
         long searchTime = System.currentTimeMillis() - searchStart;
+        OptConfig.lastRootScore = rs;  // Instrumentation: root value is ordering-invariant
         System.out.println("[AI] Alpha-beta search completed in " + searchTime + "ms (score=" + String.format("%.2f", rs) + ")");
 
         if(best == null){
-            System.out.println("[AI] No best move found, using random selection");
-            best = generateRandomMove();
+            if(OptConfig.USE_SMART_FALLBACK){
+                System.out.println("[AI] Position decided; playing most connective move");
+                best = bestFallbackMove(base, color);
+            }
+            if(best == null){
+                System.out.println("[AI] No best move found, using random selection");
+                OptConfig.randomFallbacks++;  // Instrumentation: nondeterministic move
+                best = generateRandomMove();
+            }
         }
 
         vector[0] = best.getRow();
         vector[1] = best.getColumn();
 
         long totalTime = System.currentTimeMillis() - startTime;
+        if(Analysis.ENABLED) Analysis.finish(vector[0], vector[1], totalTime);
         System.out.println("[AI] Move calculation complete: (" + vector[0] + "," + vector[1] +
             ") in " + totalTime + "ms\n");
 
@@ -221,7 +344,12 @@ class SingleThread extends Heuristic{
             System.out.println("[AI] Evaluating " + free.size() + " candidate moves at root level...");
         }
 
-        sortByProximityAndKillers(free, s.getTargetCell(), killerMoves[level]);  // Order by killers then proximity
+        if(OptConfig.USE_ROOT_PRESORT && level == maxDepth)
+            presortByShallowEval(free, s, true);
+        else if(OptConfig.USE_LOCAL_ORDERING)
+            sortByLocalityAndKillers(free, s, killerMoves[level]);  // Order by killers then near-stone locality
+        else
+            sortByProximityAndKillers(free, s.getTargetCell(), killerMoves[level]);  // Order by killers then proximity
 
         int movesEvaluated = 0;
         int cutoffs = 0;
@@ -232,6 +360,9 @@ class SingleThread extends Heuristic{
 
             double value = alphaBetaMin(n, level - 1, alpha, beta);
             movesEvaluated++;
+
+            if(Analysis.ENABLED && level == maxDepth)
+                Analysis.record(c.getRow(), c.getColumn(), value);
 
             if(alpha < value){
                 alpha = value;
@@ -286,7 +417,12 @@ class SingleThread extends Heuristic{
             System.out.println("[AI] Evaluating " + free.size() + " candidate moves at root level...");
         }
 
-        sortByProximityAndKillers(free, s.getTargetCell(), killerMoves[level]);  // Order by killers then proximity
+        if(OptConfig.USE_ROOT_PRESORT && level == maxDepth)
+            presortByShallowEval(free, s, false);
+        else if(OptConfig.USE_LOCAL_ORDERING)
+            sortByLocalityAndKillers(free, s, killerMoves[level]);  // Order by killers then near-stone locality
+        else
+            sortByProximityAndKillers(free, s.getTargetCell(), killerMoves[level]);  // Order by killers then proximity
 
         int movesEvaluated = 0;
         int cutoffs = 0;
@@ -297,6 +433,9 @@ class SingleThread extends Heuristic{
 
             double value = alphaBetaMax(n, level - 1, alpha, beta);
             movesEvaluated++;
+
+            if(Analysis.ENABLED && level == maxDepth)
+                Analysis.record(c.getRow(), c.getColumn(), value);
 
             if(value < beta){
                 beta = value;
@@ -349,7 +488,17 @@ class MultiThread extends Heuristic{
         // Create thread pool sized to available processors
         // This pool will be reused across all move evaluations
         int numThreads = Runtime.getRuntime().availableProcessors();
-        executor = Executors.newFixedThreadPool(numThreads);
+        /* Daemon threads: the pool is never shut down by the UI, and
+         * non-daemon workers keep the JVM alive after the work is done
+         * (harmless in the GUI, which calls System.exit, but it hangs
+         * headless callers such as tests and benchmarks). */
+        executor = Executors.newFixedThreadPool(numThreads, new ThreadFactory(){
+            public Thread newThread(Runnable r){
+                Thread t = new Thread(r, "hexodus-search");
+                t.setDaemon(true);
+                return t;
+            }
+        });
         killerMoves = new Square[10][2];  // Support up to depth 9 (larger than any reasonable level)
 
         // Pre-allocate thread-local ArrayList buffers for each recursion level
@@ -405,6 +554,8 @@ class MultiThread extends Heuristic{
             ", free cells=" + numFreeCells + ")");
         System.out.println("[AI] Submitting " + numFreeCells + " parallel evaluation tasks to thread pool...");
 
+        if(Analysis.ENABLED) Analysis.begin(dimension, color, numFreeCells);
+
         // Use CompletionService to process results as they complete
         CompletionService<MoveEvaluation> completionService = new ExecutorCompletionService<>(executor);
 
@@ -431,6 +582,9 @@ class MultiThread extends Heuristic{
                 Future<MoveEvaluation> completedFuture = completionService.take();
                 MoveEvaluation result = completedFuture.get();
                 completed++;
+
+                if(Analysis.ENABLED && result.cell != null)
+                    Analysis.record(result.cell.getRow(), result.cell.getColumn(), result.value);
 
                 boolean improved = false;
                 if(color == 1 && result.value > bestValue){
@@ -478,13 +632,18 @@ class MultiThread extends Heuristic{
             (cancelled > 0 ? " (saved " + cancelled + " evaluations)" : ""));
 
         if(bestCell == null){
-            bestCell = free.get(0);  // Fallback
+            if(OptConfig.USE_SMART_FALLBACK){
+                System.out.println("[AI] Position decided; playing most connective move");
+                bestCell = bestFallbackMove(base[0], color);
+            }
+            if(bestCell == null) bestCell = free.get(0);  // Fallback
         }
 
         vector[0] = bestCell.getRow();
         vector[1] = bestCell.getColumn();
 
         long totalTime = System.currentTimeMillis() - startTime;
+        if(Analysis.ENABLED) Analysis.finish(vector[0], vector[1], totalTime);
         System.out.println("[AI] Move calculation complete: (" + vector[0] + "," + vector[1] +
             ") score=" + String.format("%.2f", bestValue) + " in " + totalTime + "ms\n");
 
@@ -518,7 +677,10 @@ class MultiThread extends Heuristic{
             System.out.println("[AI]   Evaluating " + free.size() + " moves at depth " + level);
         }
 
-        sortByProximityAndKillers(free, s.getTargetCell(), killerMoves[level]);  // Order by killers then proximity
+        if(OptConfig.USE_LOCAL_ORDERING)
+            sortByLocalityAndKillers(free, s, killerMoves[level]);  // Order by killers then near-stone locality
+        else
+            sortByProximityAndKillers(free, s.getTargetCell(), killerMoves[level]);  // Order by killers then proximity
 
         int movesEvaluated = 0;
         int cutoffs = 0;
@@ -589,7 +751,10 @@ class MultiThread extends Heuristic{
             System.out.println("[AI]   Evaluating " + free.size() + " moves at depth " + level);
         }
 
-        sortByProximityAndKillers(free, s.getTargetCell(), killerMoves[level]);  // Order by killers then proximity
+        if(OptConfig.USE_LOCAL_ORDERING)
+            sortByLocalityAndKillers(free, s, killerMoves[level]);  // Order by killers then near-stone locality
+        else
+            sortByProximityAndKillers(free, s.getTargetCell(), killerMoves[level]);  // Order by killers then proximity
 
         int movesEvaluated = 0;
         int cutoffs = 0;

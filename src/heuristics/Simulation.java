@@ -68,14 +68,19 @@ public class Simulation {
      *  @param color Color of the player responsible for the simulation */
     public Simulation(Simulation base, int row, int column, int color) {
         this();
-        
+        long tStart = System.nanoTime();    // Phase timer (instrumentation)
+
         board = base.getBoard();
         connections = board.getConnections();
         int dimension = board.getDimension();
         
         for(int i = 0; i <= 1; i++){
             G[i] = new ArrayList <Cell>();
-            C[i] = new Connections(dimension);
+            /* C[i] is never read during the search (calculateResistance works on
+             * a copy of the board connections), only by the display helpers, so
+             * the reuse variant skips this allocation. */
+            if(!OptConfig.USE_REUSE)
+                C[i] = new Connections(dimension);
             SC[i] = new Connections(dimension);
         }
 
@@ -155,6 +160,7 @@ public class Simulation {
                 connections.insertDirectPath(newNeighbor, target); // before above
             }
         }
+        OptConfig.nsSimBuild += System.nanoTime() - tStart;
     }
     
     /** Returns the target square that the simulation studies
@@ -168,7 +174,8 @@ public class Simulation {
      *  the black resistance */
     public double calculateValue() {
         double r0 = 0, r1 = 0;
-        
+        OptConfig.evalCount++;
+
         try {
             r0 = calculateResistance(0);
             RestauraPaths();
@@ -187,6 +194,29 @@ public class Simulation {
     /** Restores the data from la simulacin current basndose en el history of
      *  recorded changes */
     public void restore(){
+        restoreImpl();
+    }
+
+    /** Computes only the given player's resistance for this position.
+     *  Used by the decided-position fallback: when the full evaluation is
+     *  Infinity for every move, the player's own resistance still ranks
+     *  moves by how much they strengthen the player's own connection
+     *  (lower is better).
+     *  @param color Player whose resistance is computed
+     *  @return The player's equivalent resistance */
+    public double calculateOwnResistance(int color){
+        double r = Double.POSITIVE_INFINITY;
+        try {
+            r = calculateResistance(color);
+            RestauraPaths();
+        } catch (NonexistentSquare ex) {
+            ex.printStackTrace();
+        }
+        return r;
+    }
+
+    private void restoreImpl(){
+        long tStart = System.nanoTime();    // Phase timer (instrumentation)
         target.occupy(-1);
         boolean conectar = false;
         ArrayList remove = new ArrayList();
@@ -234,6 +264,7 @@ public class Simulation {
                 prov.removeNeighbor(target);
             }
         }
+        OptConfig.nsRestore += System.nanoTime() - tStart;
     }
     
     /** Returns the free squares of the board associated with the simulation
@@ -260,6 +291,7 @@ public class Simulation {
     /** Calculates the valid combinations between the elements of the set G,
      *  called g, g1 and g2. Keeps g fixed and varies g1 and g2 over it: */
     private double calculateResistance(int color) throws NonexistentSquare{
+        long tPhase = System.nanoTime();    // Phase timer (instrumentation)
         int maxDepth = 100;
 
         /* Creates a list to contain the paths that should expire in the
@@ -277,10 +309,16 @@ public class Simulation {
         int numNodes = G[color].size();
         Cell[] ArrayG = (Cell []) G[color].toArray(new Cell [numNodes]);
         
-        Connections SubC = C[color];
         Connections SubSC = SC[color];
-        
-        SubC = connections.clone();
+        Connections SubC;
+
+        /* The search works on a private copy of the board connections. The
+         * reuse variant copies into per-thread scratch buffers (recycling the
+         * Route matrix and Route objects) instead of cloning. */
+        if(OptConfig.USE_REUSE)
+            SubC = Scratch.get(board.getDimension()).copyConnections(connections);
+        else
+            SubC = connections.clone();
 
         // Prevents indices from having to be redefined in each iteration
         int g1;
@@ -296,9 +334,14 @@ public class Simulation {
         newsConnections = true;
         int iterations = 0;
 
+        long tNow = System.nanoTime();
+        OptConfig.nsSetup += tNow - tPhase;
+        tPhase = tNow;
+
         while(newsConnections && (iterations < maxDepth)){
             newsConnections = false;
             iterations++;
+            if(OptConfig.USE_DIRTY_SKIP) SubC.refreshNewFlags();
             for(g = 0; g < numNodes; g++){
                 cg = ArrayG[g];
                 for(g1 = 0; g1 < numNodes; g1++){
@@ -321,7 +364,7 @@ public class Simulation {
                                         Route r2 = SubC.getRoute(cg, cg2);
                                         if(r2 == null) r2 = SubC.getRoute(cg2, cg);
                                         
-                                        if((r1 != null) && (r2 != null)){
+                                        if((r1 != null) && (r2 != null) && routePairWorthVisiting(r1, r2)){
                                             ic1 = r1.getIterator();
 
                                             /* The following block ensures that all possible combinations
@@ -351,8 +394,10 @@ public class Simulation {
                                                                     if((((((Border)cg1).getName() == 'N') && (((Border)cg2).getName() == 'S')) ||
                                                                             ((((Border)cg1).getName() == 'S') && (((Border)cg2).getName() == 'N'))) ||
                                                                             (((((Border)cg1).getName() == 'E') && (((Border)cg2).getName() == 'W')) ||
-                                                                            ((((Border)cg1).getName() == 'W') && (((Border)cg2).getName() == 'E'))))
+                                                                            ((((Border)cg1).getName() == 'W') && (((Border)cg2).getName() == 'E')))){
+                                                                        OptConfig.nsHSearch += System.nanoTime() - tPhase;
                                                                         return 0;
+                                                                    }
                                                                 }
                                                             }
                                                             else{
@@ -368,8 +413,11 @@ public class Simulation {
 
                                                                     if(r.add(sc)){
                                                                         Route rsc = r.cloneWithoutPath(sc);
-                                                                        if(AplicarReglaOR(SubC, cg1, cg2, rsc, sc, sc)) return 0;
-                                                                    }  
+                                                                        if(AplicarReglaOR(SubC, cg1, cg2, rsc, sc, sc)){
+                                                                            OptConfig.nsHSearch += System.nanoTime() - tPhase;
+                                                                            return 0;
+                                                                        }
+                                                                    }
                                                                 }                                                               
                                                             }
                                                         }
@@ -393,10 +441,23 @@ public class Simulation {
                 mod.changeNew(false);
                 renew.add(mod);
             }
-            expiring.clear();
-            expiring = (ArrayList) nextExpiring.clone();
-            nextExpiring.clear();
+            if(OptConfig.USE_REUSE){
+                // Swap the lists instead of cloning; net effect is identical
+                ArrayList tmp = expiring;
+                expiring = nextExpiring;
+                nextExpiring = tmp;
+                nextExpiring.clear();
+            }
+            else{
+                expiring.clear();
+                expiring = (ArrayList) nextExpiring.clone();
+                nextExpiring.clear();
+            }
         }
+
+        tNow = System.nanoTime();
+        OptConfig.nsHSearch += tNow - tPhase;
+        tPhase = tNow;
 
         HashSet<Cell> Visited = new HashSet<Cell>();      // Creates a set for visited nodes (O(1) contains)
 
@@ -417,9 +478,17 @@ public class Simulation {
         double B[];     // The column matrix of independent terms of the equation
         int sourceIndex = -1;
 
-        M = new double [numNodes][numNodes];
-        N = new double [numNodes-1][numNodes-1];
-        B = new double [numNodes-1];
+        if(OptConfig.USE_REUSE){
+            Scratch scratch = Scratch.get(board.getDimension());
+            M = scratch.getM(numNodes);
+            N = scratch.getN(numNodes);
+            B = scratch.getB(numNodes);
+        }
+        else{
+            M = new double [numNodes][numNodes];
+            N = new double [numNodes-1][numNodes-1];
+            B = new double [numNodes-1];
+        }
 
         int Current = 1; // Intensity transmitted by the current source
         int n = 0;          // Index in G of current element
@@ -488,13 +557,34 @@ public class Simulation {
             }
             i++;
         }
+        tNow = System.nanoTime();
+        OptConfig.nsMatrix += tNow - tPhase;
+        tPhase = tNow;
+
         Matrix m = new Matrix(N);
         double c[] = new double[numNodes-1];
         c = m.solve(B, true);
 
+        OptConfig.nsSolve += System.nanoTime() - tPhase;
         return c[sourceIndex];
     }
     
+    /** Dirty-skip check for one H-search triple: when neither route
+     *  contains a new path, the pair scan below cannot fire (the AND rule
+     *  requires at least one new ingredient), so it can be skipped
+     *  wholesale. Exact, not heuristic: the skipped scan has no observable
+     *  effect, and visit order is preserved, so results are bit-identical.
+     *  @param r1 Route between the pivot and the first auxiliary cell
+     *  @param r2 Route between the pivot and the second auxiliary cell
+     *  @return True if the pair scan must run */
+    private static boolean routePairWorthVisiting(Route r1, Route r2){
+        if(!OptConfig.USE_DIRTY_SKIP) return true;
+        OptConfig.triplesTotal++;
+        if(r1.hasAnyNew() || r2.hasAnyNew()) return true;
+        OptConfig.triplesSkipped++;
+        return false;
+    }
+
     /** Recursive function that applies the OR rule on a route created by applying
      *  the AND rule. The length of the routes passed to it is limited by K
      *  to prevent the calls from exploding. */

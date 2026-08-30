@@ -96,6 +96,21 @@ public class Connections implements Cloneable{
         return;
     }
 
+    /** Returns the internal route matrix. Package-private, used by the
+     *  scratch buffers to copy connections without allocation.
+     *  @return The Route matrix indexed by cell ids */
+    Route[][] getMap(){
+        return map;
+    }
+
+    /** Recomputes the new-path flag of every route. Called by the
+     *  dirty-skip optimization at the start of each H-search generation. */
+    void refreshNewFlags(){
+        for(int i = 0; i < dimension; i++)
+            for(int j = 0; j < dimension; j++)
+                if(map[i][j] != null) map[i][j].refreshAnyNew();
+    }
+
     public Connections clone(){
         Route [][] r = new Route[dimension][dimension];
         for(int i = 0; i < dimension; i++)

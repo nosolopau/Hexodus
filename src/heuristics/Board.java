@@ -276,6 +276,15 @@ public class Board {
         return lis;
     }
 
+    /** Populates the provided list with the occupied squares of the board.
+     *  Used by locality-based move ordering.
+     *  @param lis ArrayList to populate with occupied squares */
+    public void getOccupiedInto(ArrayList<Square> lis){
+        for(int i = 0; i < dimension; i++)
+            for(int j = 0; j < dimension; j++)
+                if(!squares[i][j].isEmpty()) lis.add((Square)squares[i][j]);
+    }
+
     /** Populates the provided list with free cells.
      *  Optimization to avoid creating new ArrayList in alpha-beta search.
      *  @param lis ArrayList to populate with free cells */
