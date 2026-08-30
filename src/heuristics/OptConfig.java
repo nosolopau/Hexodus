@@ -62,6 +62,10 @@ public final class OptConfig {
      *  rule misses provable connections. */
     public static int maxPathsPerRoute = 20;
 
+    /** Print the engine's search progress to the console. Useful when
+     *  working on the search, noise during a game, so off by default. */
+    public static boolean VERBOSE = false;
+
     /** Number of leaf evaluations performed (calculateValue calls),
      *  incremented for instrumentation. */
     public static long evalCount = 0;

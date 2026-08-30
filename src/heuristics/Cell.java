@@ -101,14 +101,6 @@ public class Cell {
         else return resistanceWhite;
     }
 
-    /** Sets the resistance value of the cell for a specific player
-     *  @param resistance Resistance value to assign to the cell
-     *  @param color Color of the player whose resistance will be assigned the value
-     *  in the resistance parameter */
-    public void setResistance(int resistance, int color){
-        if(color == 1) resistanceWhite = resistance;
-        else resistanceBlack = resistance;
-    }
 
     /** Adds a neighbor to the cell's neighbor list
      *  @param cell Neighbor to add */

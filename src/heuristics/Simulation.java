@@ -18,7 +18,6 @@ public class Simulation {
     private ArrayList <Cell> affectedNeighbors ;
     private ArrayList renew;
     private ArrayList <Cell> G[];       // List of G squares
-    private Connections C[];            // List of virtual connections for each player
     private Connections SC[];           // List of virtual semi-connections for each player
     private Connections connections;
     private boolean newsConnections;    // Stores whether C or SC were created in the previous iteration
@@ -32,7 +31,6 @@ public class Simulation {
         /* Creates two instances (one for black and one for white) of the objects that
          * are duplicated for the two players */
         G = new ArrayList [2];     // List with the 'usable' squares of the graph
-        C = new Connections [2];    // List with the virtual connections discovered
         SC = new Connections [2];   // List with the virtual semi-connections discovered
 
     }
@@ -43,10 +41,8 @@ public class Simulation {
     public Simulation(int dimension) {
         this();
         
-        for(int i = 0; i <= 1; i++){
-            C[i] = new Connections(dimension);
+        for(int i = 0; i <= 1; i++)
             SC[i] = new Connections(dimension);
-        }
         board = new Board(dimension);
         connections = board.getConnections();
     }
@@ -76,11 +72,6 @@ public class Simulation {
         
         for(int i = 0; i <= 1; i++){
             G[i] = new ArrayList <Cell>();
-            /* C[i] is never read during the search (calculateResistance works on
-             * a copy of the board connections), only by the display helpers, so
-             * the reuse variant skips this allocation. */
-            if(!OptConfig.USE_REUSE)
-                C[i] = new Connections(dimension);
             SC[i] = new Connections(dimension);
         }
 
@@ -626,78 +617,7 @@ public class Simulation {
         return false;
     }
    
-    /** Traverses the board and shows the pairs of squares and borders between which there is
-     *  an established connection.
-     *  @param  displayMode Allows configuring the list: 1 = only CV, 2 = only SCV, 3 = only connections.
-     *  @return Returns the average connections per endpoint (float) */
-   public float displayConnectionsEx(int color, int displayMode){
-        Connections ob = null;
-        Iterator it1 = G[color].iterator();
-        float total = 0, tmp = 0;
-        int count = 0;
-        Route r = null;
-
-        switch(displayMode){
-            case 1:
-                ob = C[color];
-                break;
-            case 2:
-                ob = SC[color];
-                break;
-        }
-                
-        while(it1.hasNext()){
-            Iterator it2 = G[color].iterator();
-            Cell c1 = (Cell) it1.next();
-            while(it2.hasNext()){
-                Cell c2 = (Cell) it2.next();
-                if(c2 != c1){ 
-                    if(ob.hasConnection(c1, c2)){
-                        r = ob.getRoute(c1, c2);
-                        tmp = r.getLength();
-                        total = total + tmp;
-                        count++;
-                        if(r != null) System.out.println("(" +  c1 + ", " + r + " , " + c2 + ") - " + (int)tmp);
-                    }
-                }
-            }
-        }
-        return ((float) (total / count));
-    }
-    
-    /** Traverses the board and shows the pairs of squares and borders between which there is
-     *  an established connection.
-     *  @param displayMode Allows configuring the list: 1 = only CV, 2 = only SCV, 3 = only connections. */
-    public void displayMinimalConnections(int color, int displayMode){
-        Connections ob = null;
-        Iterator it1 = G[color].iterator();
-        int count = 0;
-        Route r = null;
-
-        switch(displayMode){
-            case 1:
-                ob = C[color];
-                break;
-            case 2:
-                ob = SC[color];
-                break;
-        }  
-                            
-        while(it1.hasNext()){
-            Iterator it2 = G[color].iterator();
-            Cell c1 = (Cell) it1.next();
-            while(it2.hasNext()){
-                Cell c2 = (Cell) it2.next();
-                if(c2 != c1){
-                    if(ob.hasConnection(c1, c2)){
-                        r = ob.getRoute(c1, c2);
-                        count++;
-                        if(r != null) System.out.println("(" +  c1 + ", " + r.getMinimumPath() + " , " + c2 + ")");
-                    }
-                }
-            }
-        }
-    }
+     
     
     /** Returns the board associated with the simulation
      *  @return The simulation board */

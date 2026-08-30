@@ -56,6 +56,11 @@ public abstract class Heuristic {
     protected abstract double alphaBetaMin(Simulation s, int depth, double alpha, double beta) throws NonexistentSquare;
     protected abstract double alphaBetaMax(Simulation s, int depth, double alpha, double beta) throws NonexistentSquare;
 
+    /** Search tracing, silent unless OptConfig.VERBOSE is set */
+    protected static void log(String message){
+        if(OptConfig.VERBOSE) System.out.println(message);
+    }
+
     public boolean decideSwap(int row, int col){
         if((row == favorites[dimension][0][0]) && (col == favorites[dimension][0][1]))
             return true;
@@ -89,13 +94,6 @@ public abstract class Heuristic {
         return best;
     }
 
-    /** Sorts moves by proximity to a target square for better alpha-beta pruning.
-     *  Moves closer to the target are evaluated first, improving cutoff rates.
-     *  @param moves List of candidate moves to sort
-     *  @param target The reference square (typically the last move played) */
-    protected void sortByProximity(ArrayList<Square> moves, Square target) {
-        sortByProximityAndKillers(moves, target, null);
-    }
 
     /** Hex distance between two squares on this board's adjacency
      *  (neighbors: row/column steps plus the (+1,+1)/(-1,-1) diagonal) */
@@ -270,7 +268,7 @@ class SingleThread extends Heuristic{
         }
 
         long startTime = System.currentTimeMillis();
-        System.out.println("[AI] Starting move calculation (depth=" + maxDepth +
+        log("[AI] Starting move calculation (depth=" + maxDepth +
             ", color=" + (color == 1 ? "VERTICAL" : "HORIZONTAL") +
             ", free cells=" + base.getFreeCells().size() + ")");
 
@@ -293,15 +291,15 @@ class SingleThread extends Heuristic{
         }
         long searchTime = System.currentTimeMillis() - searchStart;
         OptConfig.lastRootScore = rs;  // Instrumentation: root value is ordering-invariant
-        System.out.println("[AI] Alpha-beta search completed in " + searchTime + "ms (score=" + String.format("%.2f", rs) + ")");
+        log("[AI] Alpha-beta search completed in " + searchTime + "ms (score=" + String.format("%.2f", rs) + ")");
 
         if(best == null){
             if(OptConfig.USE_SMART_FALLBACK){
-                System.out.println("[AI] Position decided; playing most connective move");
+                log("[AI] Position decided; playing most connective move");
                 best = bestFallbackMove(base, color);
             }
             if(best == null){
-                System.out.println("[AI] No best move found, using random selection");
+                log("[AI] No best move found, using random selection");
                 OptConfig.randomFallbacks++;  // Instrumentation: nondeterministic move
                 best = generateRandomMove();
             }
@@ -312,7 +310,7 @@ class SingleThread extends Heuristic{
 
         long totalTime = System.currentTimeMillis() - startTime;
         if(Analysis.ENABLED) Analysis.finish(vector[0], vector[1], totalTime);
-        System.out.println("[AI] Move calculation complete: (" + vector[0] + "," + vector[1] +
+        log("[AI] Move calculation complete: (" + vector[0] + "," + vector[1] +
             ") in " + totalTime + "ms\n");
 
         return vector;
@@ -326,10 +324,10 @@ class SingleThread extends Heuristic{
             if(evalTime > 10) {  // Only log if position evaluation takes >10ms
                 Square target = s.getTargetCell();
                 if(target != null){
-                    System.out.println("[AI]   Leaf position evaluated in " + evalTime + "ms for (" +
+                    log("[AI]   Leaf position evaluated in " + evalTime + "ms for (" +
                         target.getRow() + "," + target.getColumn() + ")");
                 } else {
-                    System.out.println("[AI]   Leaf position evaluated in " + evalTime + "ms");
+                    log("[AI]   Leaf position evaluated in " + evalTime + "ms");
                 }
             }
             return value;
@@ -341,7 +339,7 @@ class SingleThread extends Heuristic{
         s.getFreeCellsInto(free);  // Populate buffer
 
         if(level == maxDepth) {
-            System.out.println("[AI] Evaluating " + free.size() + " candidate moves at root level...");
+            log("[AI] Evaluating " + free.size() + " candidate moves at root level...");
         }
 
         if(OptConfig.USE_ROOT_PRESORT && level == maxDepth)
@@ -368,7 +366,7 @@ class SingleThread extends Heuristic{
                 alpha = value;
                 if(level == maxDepth) { // Ensures best move is generated at last level
                     bestMax = c;
-                    System.out.println("[AI]   New best move: (" + c.getRow() + "," + c.getColumn() +
+                    log("[AI]   New best move: (" + c.getRow() + "," + c.getColumn() +
                         ") score=" + String.format("%.2f", value) + " [" + movesEvaluated + "/" + free.size() + " moves evaluated]");
                 }
             }
@@ -383,7 +381,7 @@ class SingleThread extends Heuristic{
                 }
                 cutoffs++;
                 if(level == maxDepth) {
-                    System.out.println("[AI] Beta cutoff - pruned " + (free.size() - movesEvaluated) + " remaining moves");
+                    log("[AI] Beta cutoff - pruned " + (free.size() - movesEvaluated) + " remaining moves");
                 }
                 return alpha;
             }
@@ -399,10 +397,10 @@ class SingleThread extends Heuristic{
             if(evalTime > 10) {  // Only log if position evaluation takes >10ms
                 Square target = s.getTargetCell();
                 if(target != null){
-                    System.out.println("[AI]   Leaf position evaluated in " + evalTime + "ms for (" +
+                    log("[AI]   Leaf position evaluated in " + evalTime + "ms for (" +
                         target.getRow() + "," + target.getColumn() + ")");
                 } else {
-                    System.out.println("[AI]   Leaf position evaluated in " + evalTime + "ms");
+                    log("[AI]   Leaf position evaluated in " + evalTime + "ms");
                 }
             }
             return value;
@@ -414,7 +412,7 @@ class SingleThread extends Heuristic{
         s.getFreeCellsInto(free);  // Populate buffer
 
         if(level == maxDepth) {
-            System.out.println("[AI] Evaluating " + free.size() + " candidate moves at root level...");
+            log("[AI] Evaluating " + free.size() + " candidate moves at root level...");
         }
 
         if(OptConfig.USE_ROOT_PRESORT && level == maxDepth)
@@ -441,7 +439,7 @@ class SingleThread extends Heuristic{
                 beta = value;
                 if(level == maxDepth) {
                     bestMin = c;
-                    System.out.println("[AI]   New best move: (" + c.getRow() + "," + c.getColumn() +
+                    log("[AI]   New best move: (" + c.getRow() + "," + c.getColumn() +
                         ") score=" + String.format("%.2f", value) + " [" + movesEvaluated + "/" + free.size() + " moves evaluated]");
                 }
             }
@@ -456,7 +454,7 @@ class SingleThread extends Heuristic{
                 }
                 cutoffs++;
                 if(level == maxDepth) {
-                    System.out.println("[AI] Alpha cutoff - pruned " + (free.size() - movesEvaluated) + " remaining moves");
+                    log("[AI] Alpha cutoff - pruned " + (free.size() - movesEvaluated) + " remaining moves");
                 }
                 return beta;
             }
@@ -549,10 +547,10 @@ class MultiThread extends Heuristic{
         ArrayList <Square> free = base[0].getFreeCells();
         int numFreeCells = free.size();
 
-        System.out.println("[AI] Starting move calculation (depth=" + maxDepth +
+        log("[AI] Starting move calculation (depth=" + maxDepth +
             ", color=" + (color == 1 ? "VERTICAL" : "HORIZONTAL") +
             ", free cells=" + numFreeCells + ")");
-        System.out.println("[AI] Submitting " + numFreeCells + " parallel evaluation tasks to thread pool...");
+        log("[AI] Submitting " + numFreeCells + " parallel evaluation tasks to thread pool...");
 
         if(Analysis.ENABLED) Analysis.begin(dimension, color, numFreeCells);
 
@@ -568,7 +566,7 @@ class MultiThread extends Heuristic{
             futures.add(completionService.submit(task));
         }
         long submitTime = System.currentTimeMillis() - submitStart;
-        System.out.println("[AI] All tasks submitted in " + submitTime + "ms, processing as they complete...");
+        log("[AI] All tasks submitted in " + submitTime + "ms, processing as they complete...");
 
         // Process results as they complete, with early termination
         long waitStart = System.currentTimeMillis();
@@ -598,7 +596,7 @@ class MultiThread extends Heuristic{
                 }
 
                 if(improved){
-                    System.out.println("[AI]   New best: (" + bestCell.getRow() + "," + bestCell.getColumn() +
+                    log("[AI]   New best: (" + bestCell.getRow() + "," + bestCell.getColumn() +
                         ") score=" + String.format("%.2f", bestValue) + " [" + completed + "/" + numFreeCells + " complete]");
                 }
 
@@ -618,7 +616,7 @@ class MultiThread extends Heuristic{
                             }
                         }
                     }
-                    System.out.println("[AI] Early termination: found winning move, cancelled " +
+                    log("[AI] Early termination: found winning move, cancelled " +
                         cancelled + " remaining evaluations");
                     break;
                 }
@@ -628,12 +626,12 @@ class MultiThread extends Heuristic{
         }
 
         long waitTime = System.currentTimeMillis() - waitStart;
-        System.out.println("[AI] Completed " + completed + " evaluations in " + waitTime + "ms" +
+        log("[AI] Completed " + completed + " evaluations in " + waitTime + "ms" +
             (cancelled > 0 ? " (saved " + cancelled + " evaluations)" : ""));
 
         if(bestCell == null){
             if(OptConfig.USE_SMART_FALLBACK){
-                System.out.println("[AI] Position decided; playing most connective move");
+                log("[AI] Position decided; playing most connective move");
                 bestCell = bestFallbackMove(base[0], color);
             }
             if(bestCell == null) bestCell = free.get(0);  // Fallback
@@ -644,7 +642,7 @@ class MultiThread extends Heuristic{
 
         long totalTime = System.currentTimeMillis() - startTime;
         if(Analysis.ENABLED) Analysis.finish(vector[0], vector[1], totalTime);
-        System.out.println("[AI] Move calculation complete: (" + vector[0] + "," + vector[1] +
+        log("[AI] Move calculation complete: (" + vector[0] + "," + vector[1] +
             ") score=" + String.format("%.2f", bestValue) + " in " + totalTime + "ms\n");
 
         return vector;
@@ -658,10 +656,10 @@ class MultiThread extends Heuristic{
             if(evalTime > 50) {  // Only log slow evaluations to avoid clutter
                 Square target = s.getTargetCell();
                 if(target != null){
-                    System.out.println("[AI]     Position evaluation took " + evalTime + "ms for (" +
+                    log("[AI]     Position evaluation took " + evalTime + "ms for (" +
                         target.getRow() + "," + target.getColumn() + ")");
                 } else {
-                    System.out.println("[AI]     Position evaluation took " + evalTime + "ms");
+                    log("[AI]     Position evaluation took " + evalTime + "ms");
                 }
             }
             return v;
@@ -674,7 +672,7 @@ class MultiThread extends Heuristic{
         s.getFreeCellsInto(free);  // Populate buffer
 
         if(level == maxDepth - 1) {  // Log at depth 1 (one level below root)
-            System.out.println("[AI]   Evaluating " + free.size() + " moves at depth " + level);
+            log("[AI]   Evaluating " + free.size() + " moves at depth " + level);
         }
 
         if(OptConfig.USE_LOCAL_ORDERING)
@@ -709,7 +707,7 @@ class MultiThread extends Heuristic{
                 cutoffs++;
                 if(level == maxDepth - 1) {
                     long elapsed = System.currentTimeMillis() - startTime;
-                    System.out.println("[AI]   Cutoff at depth " + level + " after " + movesEvaluated + "/" + free.size() +
+                    log("[AI]   Cutoff at depth " + level + " after " + movesEvaluated + "/" + free.size() +
                         " moves (" + elapsed + "ms)");
                 }
                 return alpha;
@@ -718,7 +716,7 @@ class MultiThread extends Heuristic{
 
         if(level == maxDepth - 1) {
             long elapsed = System.currentTimeMillis() - startTime;
-            System.out.println("[AI]   Completed depth " + level + ": " + movesEvaluated + " moves in " + elapsed + "ms");
+            log("[AI]   Completed depth " + level + ": " + movesEvaluated + " moves in " + elapsed + "ms");
         }
 
         return alpha;
@@ -732,10 +730,10 @@ class MultiThread extends Heuristic{
             if(evalTime > 50) {  // Only log slow evaluations to avoid clutter
                 Square target = s.getTargetCell();
                 if(target != null){
-                    System.out.println("[AI]     Position evaluation took " + evalTime + "ms for (" +
+                    log("[AI]     Position evaluation took " + evalTime + "ms for (" +
                         target.getRow() + "," + target.getColumn() + ")");
                 } else {
-                    System.out.println("[AI]     Position evaluation took " + evalTime + "ms");
+                    log("[AI]     Position evaluation took " + evalTime + "ms");
                 }
             }
             return v;
@@ -748,7 +746,7 @@ class MultiThread extends Heuristic{
         s.getFreeCellsInto(free);  // Populate buffer
 
         if(level == maxDepth - 1) {  // Log at depth 1 (one level below root)
-            System.out.println("[AI]   Evaluating " + free.size() + " moves at depth " + level);
+            log("[AI]   Evaluating " + free.size() + " moves at depth " + level);
         }
 
         if(OptConfig.USE_LOCAL_ORDERING)
@@ -783,7 +781,7 @@ class MultiThread extends Heuristic{
                 cutoffs++;
                 if(level == maxDepth - 1) {
                     long elapsed = System.currentTimeMillis() - startTime;
-                    System.out.println("[AI]   Cutoff at depth " + level + " after " + movesEvaluated + "/" + free.size() +
+                    log("[AI]   Cutoff at depth " + level + " after " + movesEvaluated + "/" + free.size() +
                         " moves (" + elapsed + "ms)");
                 }
                 return beta;
@@ -792,7 +790,7 @@ class MultiThread extends Heuristic{
 
         if(level == maxDepth - 1) {
             long elapsed = System.currentTimeMillis() - startTime;
-            System.out.println("[AI]   Completed depth " + level + ": " + movesEvaluated + " moves in " + elapsed + "ms");
+            log("[AI]   Completed depth " + level + ": " + movesEvaluated + " moves in " + elapsed + "ms");
         }
 
         return beta;
