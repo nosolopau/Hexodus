@@ -200,8 +200,11 @@ public class HeuristicBoardTest {
         ArrayList<Cell> neighbors = corner.getNeighborList();
 
         assertNotNull(neighbors);
-        // Corner square should have fewer neighbors (3 in hex)
-        assertEquals(3, neighbors.size());
+        /* The engine treats the board edges as cells, so a corner has its
+         * 3 board neighbours plus the two edges it sits on. */
+        assertEquals(3, countSquares(neighbors));
+        assertEquals(2, countBorders(neighbors));
+        assertEquals(5, neighbors.size());
     }
 
     @Test
@@ -211,8 +214,10 @@ public class HeuristicBoardTest {
         ArrayList<Cell> neighbors = edge.getNeighborList();
 
         assertNotNull(neighbors);
-        // Edge square (not corner) should have 4 neighbors
-        assertEquals(4, neighbors.size());
+        // 4 board neighbours, plus the north edge this cell lies against
+        assertEquals(4, countSquares(neighbors));
+        assertEquals(1, countBorders(neighbors));
+        assertEquals(5, neighbors.size());
     }
 
     @Test
@@ -247,5 +252,19 @@ public class HeuristicBoardTest {
 
         Square center = board7.get(3, 3);
         assertNotNull(center);
+    }
+
+    /** Board cells among a neighbour list, ignoring the board edges */
+    private static int countSquares(ArrayList<Cell> cells) {
+        int n = 0;
+        for (Cell c : cells) if (!(c instanceof Border)) n++;
+        return n;
+    }
+
+    /** Board edges among a neighbour list */
+    private static int countBorders(ArrayList<Cell> cells) {
+        int n = 0;
+        for (Cell c : cells) if (c instanceof Border) n++;
+        return n;
     }
 }

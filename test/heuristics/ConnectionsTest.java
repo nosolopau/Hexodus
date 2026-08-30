@@ -252,8 +252,10 @@ public class ConnectionsTest {
     @Test
     public void testConnectionsBetweenBorders() {
         // Test connections between border cells
-        Border north = new Border(100, 'N');
-        Border south = new Border(101, 'S');
+        /* Ids index the connection matrix, so the borders of a 5x5 board
+         * occupy 25..28, straight after the 25 cells. */
+        Border north = new Border(25, 'N');
+        Border south = new Border(26, 'S');
 
         connections.newConnection(north, south);
 
@@ -264,7 +266,7 @@ public class ConnectionsTest {
     public void testConnectionsBetweenSquareAndBorder() {
         // Test connections between squares and borders
         Square square = new Square(0, 0, 0);
-        Border north = new Border(100, 'N');
+        Border north = new Border(25, 'N');
 
         connections.newConnection(square, north);
 

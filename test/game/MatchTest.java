@@ -84,10 +84,15 @@ public class MatchTest {
         match.setLevel(0);
     }
 
-    @Test(expected = IncorrectLevel.class)
-    public void testSetLevel_InvalidLevel3() throws IncorrectLevel {
-        // Should throw exception for level 3
+    @Test
+    public void testSetLevel_Level3IsMasterMode() throws IncorrectLevel {
+        // Level 3 is Master mode and is accepted; only 0 and 4+ are rejected
         match.setLevel(3);
+    }
+
+    @Test(expected = IncorrectLevel.class)
+    public void testSetLevel_InvalidLevel4() throws IncorrectLevel {
+        match.setLevel(4);
     }
 
     @Test(expected = IncorrectLevel.class)
@@ -167,18 +172,17 @@ public class MatchTest {
 
     @Test
     public void testSmallBoardMatch() throws OccupiedSquare, NonexistentSquare {
-        // Test match with small board (3x3)
+        /* On a 3x3 board the main diagonal is a winning chain: in hex
+         * geometry (r,c) touches (r+1,c+1), so these three stones join the
+         * top edge to the bottom one. */
         Match smallMatch = new Match(3, false);
-        Player winner = null;
 
-        winner = smallMatch.newMove(0, 0, player1);
-        assertNull(winner);
+        assertNull(smallMatch.newMove(0, 0, player1));
+        assertNull(smallMatch.newMove(1, 1, player1));
 
-        winner = smallMatch.newMove(1, 1, player1);
-        assertNull(winner);
-
-        winner = smallMatch.newMove(2, 2, player1);
-        assertNull(winner);
+        Player winner = smallMatch.newMove(2, 2, player1);
+        assertNotNull("the diagonal joins both edges and should win", winner);
+        assertEquals(player1, winner);
     }
 
     @Test
