@@ -279,6 +279,66 @@ public class Simulation {
         m.put(c, neighbors);
     }
     
+    /** Applies the AND rule to one pair of paths meeting at a pivot cell,
+     *  and the OR rule to any semi-connection that produces.
+     *
+     *  With the pivot occupied by the player, the two connections join into
+     *  a single virtual connection. With it empty, the opponent could take
+     *  it, so the result is only a semi-connection — but two disjoint
+     *  semi-connections between the same endpoints make a connection, which
+     *  is what the OR rule looks for.
+     *
+     *  @param vc Virtual connections discovered so far
+     *  @param svc Semi-connections discovered so far
+     *  @param pivot Cell the two connections meet at
+     *  @param end1 Far endpoint of the first connection
+     *  @param end2 Far endpoint of the second connection
+     *  @param path1 Path of the first connection
+     *  @param path2 Path of the second connection
+     *  @param color Player being evaluated
+     *  @param nextExpiring Paths to age at the end of this generation
+     *  @return True if this deduction joined the player's two borders,
+     *  which wins the game and ends the search */
+    private boolean deduce(Connections vc, Connections svc, Cell pivot, Cell end1, Cell end2,
+            Path path1, Path path2, int color, ArrayList nextExpiring){
+        nextExpiring.add(path1);
+        nextExpiring.add(path2);
+
+        if(pivot.getColor() == color){
+            if(vc.getRoute(end1, end2) == null){
+                vc.newConnection(end1, end2);
+                newsConnections = true;
+            }
+            vc.getRoute(end1, end2).add(path1.union(path2));
+            return joinsOppositeBorders(end1, end2);
+        }
+
+        // A semi-connection is pointless where a full connection already exists
+        if(vc.hasConnectionEx(end1, end2)) return false;
+
+        Path carrier = path1.union(path2, pivot);
+        if(svc.getRoute(end1, end2) == null){
+            svc.newConnection(end1, end2);
+            newsConnections = true;
+        }
+        Route route = svc.getRoute(end1, end2);
+        if(route.add(carrier))
+            return applyOrRule(vc, end1, end2, route.cloneWithoutPath(carrier), carrier, carrier);
+        return false;
+    }
+
+    /** True when two cells are the opposing borders of the same player, so
+     *  a connection between them wins the game
+     *  @param a First cell
+     *  @param b Second cell
+     *  @return True if they are opposite borders */
+    private static boolean joinsOppositeBorders(Cell a, Cell b){
+        if(!(a instanceof Border) || !(b instanceof Border)) return false;
+        char x = ((Border) a).getName(), y = ((Border) b).getName();
+        return (x == 'N' && y == 'S') || (x == 'S' && y == 'N')
+            || (x == 'E' && y == 'W') || (x == 'W' && y == 'E');
+    }
+
     /** Calculates the valid combinations between the elements of the set G,
      *  called g, g1 and g2. Keeps g fixed and varies g1 and g2 over it: */
     private double calculateResistance(int color) throws NonexistentSquare{
@@ -360,51 +420,11 @@ public class Simulation {
                                                 ic2 = r2.getIterator();  // Reset iterator for each c1
                                                 while(ic2.hasNext()){
                                                     Path c2 = (Path) ic2.next();
-                                                    if(c1.hasEmptyIntersection(c2) && !c2.contains(cg1) && !c1.contains(cg2)){
-                                                        if(c1.isNew() || c2.isNew()){
-                                                            nextExpiring.add(c1);
-                                                            nextExpiring.add(c2);
-                                                            
-                                                            // Apply the AND rule by studying the color of the target square:
-                                                            if(cg.getColor() == color){
-                                                                if(SubC.getRoute(cg1, cg2) == null){ // If there is no route
-                                                                    SubC.newConnection(cg1, cg2);
-                                                                    newsConnections = true;
-                                                                }
-                                                                Route r = SubC.getRoute(cg1, cg2);
-                                                                Path c = c1.union(c2);
-                                                                r.add(c);
-
-                                                                if((cg1 instanceof Border) && (cg2 instanceof Border)){
-                                                                    if((((((Border)cg1).getName() == 'N') && (((Border)cg2).getName() == 'S')) ||
-                                                                            ((((Border)cg1).getName() == 'S') && (((Border)cg2).getName() == 'N'))) ||
-                                                                            (((((Border)cg1).getName() == 'E') && (((Border)cg2).getName() == 'W')) ||
-                                                                            ((((Border)cg1).getName() == 'W') && (((Border)cg2).getName() == 'E')))){
-                                                                        OptConfig.nsHSearch += System.nanoTime() - tPhase;
-                                                                        return 0;
-                                                                    }
-                                                                }
-                                                            }
-                                                            else{
-                                                                // A SCV should not be inserted if a VC already exists
-                                                                if(!SubC.hasConnectionEx(cg1, cg2)){
-                                                                    Path sc = c1.union(c2, cg);
-                                                                    
-                                                                    if(SubSC.getRoute(cg1, cg2) == null){
-                                                                        SubSC.newConnection(cg1, cg2);
-                                                                        newsConnections = true;
-                                                                    }
-                                                                    Route r = SubSC.getRoute(cg1, cg2);
-
-                                                                    if(r.add(sc)){
-                                                                        Route rsc = r.cloneWithoutPath(sc);
-                                                                        if(applyOrRule(SubC, cg1, cg2, rsc, sc, sc)){
-                                                                            OptConfig.nsHSearch += System.nanoTime() - tPhase;
-                                                                            return 0;
-                                                                        }
-                                                                    }
-                                                                }                                                               
-                                                            }
+                                                    if(c1.hasEmptyIntersection(c2) && !c2.contains(cg1) && !c1.contains(cg2)
+                                                            && (c1.isNew() || c2.isNew())){
+                                                        if(deduce(SubC, SubSC, cg, cg1, cg2, c1, c2, color, nextExpiring)){
+                                                            OptConfig.nsHSearch += System.nanoTime() - tPhase;
+                                                            return 0;
                                                         }
                                                     }
                                                 }
@@ -435,6 +455,29 @@ public class Simulation {
         OptConfig.nsHSearch += tNow - tPhase;
         tPhase = tNow;
 
+        tNow = System.nanoTime();
+        OptConfig.nsHSearch += tNow - tPhase;
+        tPhase = tNow;
+
+        return solveCircuit(nodes, numNodes, SubC, color, tPhase);
+    }
+
+    /** Turns the discovered connections into the equivalent resistor network
+     *  and solves it.
+     *
+     *  Each node is a cell; two nodes are wired together where a virtual
+     *  connection exists, with the resistance of the pair. One border is the
+     *  current source and the opposite one is ground, so the voltage at the
+     *  source node is the equivalent resistance of the whole position — the
+     *  measure of how well connected the player is.
+     *
+     *  @param nodes Cells forming the circuit
+     *  @param numNodes Number of nodes
+     *  @param vc Connections discovered by the search
+     *  @param color Player being evaluated
+     *  @param tPhase Timer carried in from the caller (instrumentation)
+     *  @return The player's equivalent resistance */
+    private double solveCircuit(Cell[] nodes, int numNodes, Connections vc, int color, long tPhase){
         HashSet<Cell> Visited = new HashSet<Cell>();      // Creates a set for visited nodes (O(1) contains)
 
         char sourceBorder;
@@ -481,14 +524,14 @@ public class Simulation {
              * be done because the matrix is symmetric: */
             Visited.add(c1);
             
-            Iterator it2 = G[color].iterator(); // Gets an iterator of the nodes
-            int m = 0;  // Index in G of current element
-            while(it2.hasNext()){
-                Cell c2 = (Cell) it2.next();
+            // Walk the same node list; the matrix is symmetric
+            int m = 0;  // Column index of the node being wired
+            for(int k = 0; k < numNodes; k++){
+                Cell c2 = nodes[k];
                 if(!Visited.contains(c2)){
                     /* If the elements are connected, inserts into the matrix
                      * the conductance between them. If they are not, inserts 0 */
-                    if(SubC.hasConnectionEx(c1, c2)){
+                    if(vc.hasConnectionEx(c1, c2)){
                         M[n][m] = M[m][n] = -1 / (double) (c1.getResistance(color) + c2.getResistance(color));
                     }
                     else M[n][m] = M[m][n] = 0;
@@ -525,13 +568,13 @@ public class Simulation {
             }
             i++;
         }
-        tNow = System.nanoTime();
+        long tNow = System.nanoTime();
         OptConfig.nsMatrix += tNow - tPhase;
         tPhase = tNow;
 
-        Matrix m = new Matrix(N);
+        Matrix matrix = new Matrix(N);
         double c[] = new double[numNodes-1];
-        c = m.solve(B, true);
+        c = matrix.solve(B, true);
 
         OptConfig.nsSolve += System.nanoTime() - tPhase;
         return c[sourceIndex];
