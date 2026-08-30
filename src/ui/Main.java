@@ -84,49 +84,17 @@ class OptionsDialog extends JDialog{
      *  @param principal    Reference to the main game window */
     public OptionsDialog(GameWindow principal){
         super(principal, "New Game", true);
-        setSize(300, 420);
         setResizable(false);
 
         game = principal;
 
-        Container panel = getContentPane();
-        panel.setLayout(null);
+        JPanel content = new JPanel(new GridBagLayout());
+        content.setBackground(Theme.BACKGROUND);
+        content.setBorder(new EmptyBorder(18, 22, 16, 22));
+        setContentPane(content);
 
-        JPanel options = new JPanel();
-        JPanel vertical = new JPanel();
-        JPanel horizontal = new JPanel();
-        options.setBorder(new TitledBorder("Game Options"));
-        vertical.setBorder(new TitledBorder("Player 1 (vertical)"));
-        horizontal.setBorder(new TitledBorder("Player 2 (horizontal)"));
-        options.setBounds(10, 10, 280, 170);
-        vertical.setBounds(10, 190, 280, 80);
-        horizontal.setBounds(10, 280, 280, 80);
-        panel.add(options);
-        panel.add(vertical);
-        panel.add(horizontal);
+        /* ---- controls ---- */
 
-        JButton Ok = new JButton();
-        Ok.addActionListener(new AcceptHandler());
-        Ok.setBounds(190, 360, 100, 30);
-        Ok.setText("Accept");
-        panel.add(Ok);
-              
-        ButtonGroup verticalGroup = new ButtonGroup();
-        ButtonGroup horizontalGroup = new ButtonGroup();
-        v1 = new JRadioButton("Human");
-        v2 = new JRadioButton("Computer");
-        h1 = new JRadioButton("Human");
-        h2 = new JRadioButton("Computer");
-        /* Always opens on human vs computer: computer-vs-computer is a
-         * demo mode, chosen deliberately rather than inherited from the
-         * previous game. */
-        v1.setSelected(true);
-        h2.setSelected(true);
-        verticalGroup.add(v1);  
-        verticalGroup.add(v2);
-        horizontalGroup.add(h1);
-        horizontalGroup.add(h2);
-        
         selDimension = new JComboBox();
         for(int i = 0; i < Main.DIMENSIONS.length; i++)
             selDimension.addItem(Main.DIMENSIONS[i] + " x " + Main.DIMENSIONS[i]);
@@ -137,62 +105,173 @@ class OptionsDialog extends JDialog{
             Main.DEFAULT_DIMENSION_INDEX, selDimension.getItemCount()));
 
         selDifficulty = new JComboBox();
-        selDifficulty.addItem("Normal Mode (Level 1)");
-        selDifficulty.addItem("Expert Mode (Level 2)");
-        selDifficulty.addItem("Master Mode (Level 3)");
-        selDifficulty.setSelectedIndex(restoreIndex(GamePrefs.DIFFICULTY, 0, selDifficulty.getItemCount()));
-
-        JLabel lblDimension = new JLabel("Dimension:");
-        JLabel lblDifficulty = new JLabel("Difficulty:");
-        enableSwap = new JCheckBox("Enable swap rule");
-        enableSwap.setSelected(GamePrefs.get(GamePrefs.SWAP, true));
+        selDifficulty.addItem("Normal  \u00b7  searches 1 move ahead");
+        selDifficulty.addItem("Expert  \u00b7  searches 2 moves ahead");
+        selDifficulty.addItem("Master  \u00b7  searches 3 moves ahead");
+        selDifficulty.setToolTipText("Deeper search plays better but takes longer.");
+        selDifficulty.setSelectedIndex(restoreIndex(GamePrefs.DIFFICULTY, 0,
+            selDifficulty.getItemCount()));
 
         selAlgorithm = new JComboBox();
         selAlgorithm.addItem("Object-Oriented H-Search");
         selAlgorithm.addItem("Bitmap H-Search");
-        selAlgorithm.setToolTipText("Both play identical moves; Bitmap H-Search analyzes ~5x faster (boards up to 11x11).");
-        selAlgorithm.setSelectedIndex(restoreIndex(GamePrefs.ALGORITHM, 1, selAlgorithm.getItemCount()));
+        selAlgorithm.setToolTipText("<html>Both play identical moves.<br>"
+            + "Bitmap H-Search analyses about 5x faster.</html>");
+        selAlgorithm.setSelectedIndex(restoreIndex(GamePrefs.ALGORITHM, 1,
+            selAlgorithm.getItemCount()));
 
-        JLabel lblAlgorithm = new JLabel("Algorithm:");
+        enableSwap = new JCheckBox("Enable swap rule");
+        enableSwap.setOpaque(false);
+        enableSwap.setToolTipText("<html>Lets the second player take over the first<br>"
+            + "player's opening move, offsetting the advantage<br>of moving first.</html>");
+        enableSwap.setSelected(GamePrefs.get(GamePrefs.SWAP, true));
 
-        /* Two-column grid: right-aligned labels, fields stretching to the
-         * panel edge, one row per option. */
-        options.setLayout(new GridBagLayout());
+        ButtonGroup verticalGroup = new ButtonGroup();
+        ButtonGroup horizontalGroup = new ButtonGroup();
+        v1 = radio("Human");
+        v2 = radio("Computer");
+        h1 = radio("Human");
+        h2 = radio("Computer");
+        /* Always opens on human vs computer: computer-vs-computer is a
+         * demo mode, chosen deliberately rather than inherited from the
+         * previous game. */
+        v1.setSelected(true);
+        h2.setSelected(true);
+        verticalGroup.add(v1);
+        verticalGroup.add(v2);
+        horizontalGroup.add(h1);
+        horizontalGroup.add(h2);
+
+        /* ---- layout: label column, field column ---- */
 
         GridBagConstraints label = new GridBagConstraints();
         label.gridx = 0;
         label.anchor = GridBagConstraints.LINE_END;
-        label.insets = new Insets(3, 10, 3, 6);
+        label.insets = new Insets(4, 0, 4, 10);
 
         GridBagConstraints field = new GridBagConstraints();
         field.gridx = 1;
         field.fill = GridBagConstraints.HORIZONTAL;
         field.weightx = 1.0;
-        field.insets = new Insets(3, 0, 3, 10);
+        field.insets = new Insets(4, 0, 4, 0);
 
-        label.gridy = field.gridy = 0;
-        options.add(lblDimension, label);
-        options.add(selDimension, field);
+        GridBagConstraints wide = new GridBagConstraints();
+        wide.gridx = 0;
+        wide.gridwidth = 2;
+        wide.fill = GridBagConstraints.HORIZONTAL;
+        wide.anchor = GridBagConstraints.LINE_START;
 
-        label.gridy = field.gridy = 1;
-        options.add(lblDifficulty, label);
-        options.add(selDifficulty, field);
+        int row = 0;
 
-        label.gridy = field.gridy = 2;
-        options.add(lblAlgorithm, label);
-        options.add(selAlgorithm, field);
+        row = section(content, "Board", row, wide, true);
+        label.gridy = field.gridy = row++;
+        content.add(new JLabel("Size"), label);
+        content.add(selDimension, field);
+        label.gridy = field.gridy = row++;
+        content.add(new JLabel("Difficulty"), label);
+        content.add(selDifficulty, field);
 
-        GridBagConstraints check = new GridBagConstraints();
-        check.gridx = 0;
-        check.gridy = 3;
-        check.gridwidth = 2;
-        check.anchor = GridBagConstraints.LINE_START;
-        check.insets = new Insets(3, 10, 3, 10);
-        options.add(enableSwap, check);
-        vertical.add(v1);
-        vertical.add(v2);
-        horizontal.add(h1);
-        horizontal.add(h2);
+        row = section(content, "Engine", row, wide, false);
+        label.gridy = field.gridy = row++;
+        content.add(new JLabel("Algorithm"), label);
+        content.add(selAlgorithm, field);
+
+        row = section(content, "Players", row, wide, false);
+        wide.gridy = row++;
+        wide.insets = new Insets(1, 0, 1, 0);
+        content.add(playerRow(Theme.RED, "Vertical", v1, v2), wide);
+        wide.gridy = row++;
+        content.add(playerRow(Theme.BLUE, "Horizontal", h1, h2), wide);
+
+        row = section(content, "Rules", row, wide, false);
+        wide.gridy = row++;
+        wide.insets = new Insets(2, 0, 2, 0);
+        content.add(enableSwap, wide);
+
+        /* ---- actions ---- */
+
+        JButton start = new JButton("Start Game");
+        start.addActionListener(new AcceptHandler());
+        JButton cancel = new JButton("Cancel");
+        cancel.addActionListener(new ActionListener(){
+            public void actionPerformed(ActionEvent e){ dispose(); }
+        });
+
+        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        buttons.setOpaque(false);
+        buttons.add(cancel);
+        buttons.add(start);
+
+        wide.gridy = row++;
+        wide.insets = new Insets(18, 0, 0, 0);
+        wide.anchor = GridBagConstraints.LINE_END;
+        content.add(buttons, wide);
+
+        getRootPane().setDefaultButton(start);          // Enter starts the game
+        getRootPane().registerKeyboardAction(new ActionListener(){   // Escape closes
+                public void actionPerformed(ActionEvent e){ dispose(); }
+            }, KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+            JComponent.WHEN_IN_FOCUSED_WINDOW);
+
+        pack();
+        setLocationRelativeTo(principal);
+    }
+
+    /** A radio button that lets the dialog background show through */
+    private static JRadioButton radio(String text){
+        JRadioButton b = new JRadioButton(text);
+        b.setOpaque(false);
+        return b;
+    }
+
+    /** Adds a small section heading with a hairline rule under it.
+     *  @return The next free grid row */
+    private static int section(JPanel panel, String title, int row,
+            GridBagConstraints wide, boolean first){
+        JLabel heading = new JLabel(title.toUpperCase());
+        heading.setFont(Theme.SMALL.deriveFont(Font.BOLD));
+        heading.setForeground(Theme.TEXT_MUTED);
+
+        wide.gridy = row++;
+        wide.insets = new Insets(first ? 0 : 16, 0, 2, 0);
+        panel.add(heading, wide);
+
+        JSeparator rule = new JSeparator();
+        rule.setForeground(Theme.LINE);
+        wide.gridy = row++;
+        wide.insets = new Insets(0, 0, 8, 0);
+        panel.add(rule, wide);
+
+        wide.insets = new Insets(0, 0, 0, 0);
+        return row;
+    }
+
+    /** One player's row: a dot in that player's colour, the side they are
+     *  connecting, and the human/computer choice. */
+    private static JPanel playerRow(final Color colour, String side,
+            JRadioButton human, JRadioButton computer){
+        JPanel rowPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
+        rowPanel.setOpaque(false);
+
+        JComponent dot = new JComponent(){
+            public Dimension getPreferredSize(){ return new Dimension(10, 12); }
+            protected void paintComponent(Graphics g){
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                    RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(colour);
+                g2.fillOval(0, 2, 9, 9);
+                g2.dispose();
+            }
+        };
+        rowPanel.add(dot);
+
+        JLabel name = new JLabel(side);
+        name.setPreferredSize(new Dimension(72, name.getPreferredSize().height));
+        rowPanel.add(name);
+        rowPanel.add(human);
+        rowPanel.add(computer);
+        return rowPanel;
     }
 
     /** Returns a stored combo index, falling back to the default when the
