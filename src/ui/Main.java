@@ -783,9 +783,6 @@ class GameWindow extends JFrame{
         move = p.generateMove(turn);
         long thinkingTime = System.currentTimeMillis() - startTime;
 
-        refreshConnections();
-        if(board != null) board.repaint();   // refresh the overlays
-
         // Show timing in status bar
         changeStatus("Move " + cellName(move[0], move[1]) + " calculated in " + thinkingTime + "ms");
 
@@ -798,6 +795,10 @@ class GameWindow extends JFrame{
         } catch (NonexistentSquare ex) {
             ex.printStackTrace();
         }
+        /* Only now does the engine hold the position including this move,
+         * so this is the earliest the connections can be read. */
+        refreshConnections();
+        if(board != null) board.repaint();
         changeTurn();
 
         // Clear status after a short delay (in a real app, would use Timer)
@@ -1175,7 +1176,6 @@ class GameWindow extends JFrame{
                  * move, so drop it rather than leave a stale overlay. */
                 heuristics.Analysis.clear();
                 placeStone(column, row);
-                refreshConnections();
 
                 // Forces the redraw
                 Graphics gf = getGraphics();
@@ -1184,6 +1184,8 @@ class GameWindow extends JFrame{
                                
                 try {
                     h = p.newMove(row,column,turn);
+                    refreshConnections();       // engine now includes this move
+                    if(board != null) board.paintImmediately(0, 0, board.getWidth(), board.getHeight());
                     if(h == null){
                         changeTurn();    
                         if(turn.isComputer()){
