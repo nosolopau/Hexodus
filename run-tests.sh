@@ -15,7 +15,8 @@ if [ $? -eq 0 ]; then
       game.BoardTest \
       heuristics.MatrixTest \
       heuristics.PathTest \
-      heuristics.HeuristicTest
+      heuristics.HeuristicTest \
+      heuristics.MultiThreadTest
 else
     echo "✗ Compilation failed!"
     exit 1
