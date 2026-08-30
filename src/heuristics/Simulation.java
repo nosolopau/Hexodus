@@ -23,7 +23,6 @@ public class Simulation {
     private Connections connections;
     private boolean newsConnections;    // Stores whether C or SC were created in the previous iteration
     private Square target;
-    private double[][] potentials = new double[2][];  // Node voltages per player
     private Board board;
     
     /** Creates the objects common to all simulations. */
@@ -397,7 +396,6 @@ public class Simulation {
                                                                             (((((Border)cg1).getName() == 'E') && (((Border)cg2).getName() == 'W')) ||
                                                                             ((((Border)cg1).getName() == 'W') && (((Border)cg2).getName() == 'E')))){
                                                                         OptConfig.nsHSearch += System.nanoTime() - tPhase;
-                                                                        C[color] = SubC;   // a won position still has connections worth showing
                                                                         return 0;
                                                                     }
                                                                 }
@@ -417,7 +415,6 @@ public class Simulation {
                                                                         Route rsc = r.cloneWithoutPath(sc);
                                                                         if(applyOrRule(SubC, cg1, cg2, rsc, sc, sc)){
                                                                             OptConfig.nsHSearch += System.nanoTime() - tPhase;
-                                                                            C[color] = SubC;   // as above
                                                                             return 0;
                                                                         }
                                                                     }
@@ -461,10 +458,6 @@ public class Simulation {
         tNow = System.nanoTime();
         OptConfig.nsHSearch += tNow - tPhase;
         tPhase = tNow;
-
-        /* Keep the connections this search discovered so the interface can
-         * show them. The search itself works on the local copy. */
-        C[color] = SubC;
 
         HashSet<Cell> Visited = new HashSet<Cell>();      // Creates a set for visited nodes (O(1) contains)
 
@@ -571,17 +564,6 @@ public class Simulation {
         Matrix m = new Matrix(N);
         double c[] = new double[numNodes-1];
         c = m.solve(B, true);
-
-        /* Keep the node voltages: the solver already computes one per cell,
-         * and only the source value is needed for the score. Ground sits at
-         * 0; every other node maps to a reduced index that skips it. */
-        double[] field = new double[board.getDimension() * board.getDimension() + 4];
-        java.util.Arrays.fill(field, Double.NaN);
-        for(int k = 0; k < numNodes; k++){
-            if(k == removeIndex) field[nodes[k].getId()] = 0.0;
-            else field[nodes[k].getId()] = c[k < removeIndex ? k : k - 1];
-        }
-        potentials[color] = field;
 
         OptConfig.nsSolve += System.nanoTime() - tPhase;
         return c[sourceIndex];
@@ -717,22 +699,6 @@ public class Simulation {
         }
     }
     
-    /** Returns the node voltages from the last evaluation, indexed by cell
-     *  id; NaN where the cell took no part in that player's circuit.
-     *  @param color Player colour
-     *  @return Voltage per cell id, or null if not computed */
-    public double[] getPotentials(int color){
-        return potentials[color];
-    }
-
-    /** Returns the virtual connections discovered for a player by the
-     *  last evaluation, for display purposes.
-     *  @param color Player colour
-     *  @return The discovered connections, or null if none were computed */
-    public Connections discovered(int color){
-        return C[color];
-    }
-
     /** Returns the board associated with the simulation
      *  @return The simulation board */
     public Board getBoard(){

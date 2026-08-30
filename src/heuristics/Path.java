@@ -194,24 +194,6 @@ public class Path {
         return list.isEmpty();
     }
 
-    /** Returns the ids of the cells making up this path, in either
-     *  representation. The interface uses this to show which empty cells a
-     *  virtual connection depends on.
-     *  @return Cell ids in the path */
-    public java.util.List<Integer> cellIds(){
-        java.util.List<Integer> ids = new java.util.ArrayList<Integer>();
-        if(OptConfig.USE_BITPATH){
-            for(int i = 0; i < 64; i++){
-                if((maskLo & (1L << i)) != 0) ids.add(Integer.valueOf(i));
-                if((maskHi & (1L << i)) != 0) ids.add(Integer.valueOf(64 + i));
-            }
-        }
-        else if(list != null){
-            for(int i = 0; i < list.size(); i++) ids.add(Integer.valueOf(list.get(i).getId()));
-        }
-        return ids;
-    }
-
     /** Returns a path iterator. Not supported in bitmask mode (returns an
      *  empty iterator), where paths are not enumerable.
      *  @return An Iterator object over the Cell list
