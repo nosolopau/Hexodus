@@ -23,6 +23,8 @@ which is what makes it interesting to write an engine for.
   would play, leaving you free to accept it or play elsewhere.
 - The **most recent stone** is drawn slightly darker, so the last move is
   easy to find on a busy board.
+- Moves are reported in the usual Hex notation — a column letter and a row
+  number counting from 1, so the top-left cell is `a1`.
 - Your board size, difficulty, algorithm and swap choices are
   **remembered between sessions**.
 
