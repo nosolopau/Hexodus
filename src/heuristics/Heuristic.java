@@ -53,6 +53,10 @@ public abstract class Heuristic {
      *  @param color Player color for which to get the move
      *  @return Array of two integers denoting row and column of the best move */
     public abstract int[] chooseMove(int color, int moveNumber);
+
+    /** The position the engine currently holds, for the interface to
+     *  describe (connection overlay). */
+    public abstract Simulation getPosition();
     protected abstract double alphaBetaMin(Simulation s, int depth, double alpha, double beta) throws NonexistentSquare;
     protected abstract double alphaBetaMax(Simulation s, int depth, double alpha, double beta) throws NonexistentSquare;
 
@@ -225,6 +229,10 @@ class SingleThread extends Heuristic{
     public void newMove(int row, int column, int color){
         Simulation newSim = new Simulation(base, row, column, color);
         base = newSim;
+    }
+
+    public Simulation getPosition(){
+        return base;
     }
 
     /** Orders root moves by a shallow (depth-0) evaluation so the most
@@ -512,6 +520,10 @@ class MultiThread extends Heuristic{
                 return buffers;
             }
         };
+    }
+
+    public Simulation getPosition(){
+        return base[0];
     }
 
     public void newMove(int row, int column, int color){

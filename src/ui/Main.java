@@ -366,6 +366,8 @@ class GameWindow extends JFrame{
     private BoardPanel board;
     private StatusBar statusBar;
     private double layoutHOff, layoutVOff;   // Cell geometry, for the analysis overlay
+    private boolean showConnections;         // Draw the connection skeleton
+    private heuristics.Skeleton[] skeletons = new heuristics.Skeleton[2];
 
     /** Minimum gap between live repaints while the engine searches. Low
      *  enough to look continuous, high enough that drawing does not eat
@@ -491,7 +493,13 @@ class GameWindow extends JFrame{
         showThinking.setSelected(GamePrefs.get(GamePrefs.SHOW_THINKING, false));
         heuristics.Analysis.ENABLED = showThinking.isSelected();
 
-        JMenuItem[] hexodus = {new JMenuItem("Suggest Move"), new JRadioButtonMenuItem("Normal Mode"), new JRadioButtonMenuItem("Expert Mode"), new JRadioButtonMenuItem("Master Mode"), showThinking};
+        JCheckBoxMenuItem showLinks = new JCheckBoxMenuItem("Show Connections");
+        showLinks.setToolTipText("<html>Marks stone groups that are already joined \u2014 even<br>"
+            + "when not physically touching \u2014 and the empty cells<br>that keep the link alive.</html>");
+        showLinks.setSelected(GamePrefs.get(GamePrefs.SHOW_LINKS, false));
+        showConnections = showLinks.isSelected();
+
+        JMenuItem[] hexodus = {new JMenuItem("Suggest Move"), new JRadioButtonMenuItem("Normal Mode"), new JRadioButtonMenuItem("Expert Mode"), new JRadioButtonMenuItem("Master Mode"), showThinking, showLinks};
         JMenuItem[] helpMenu = {new JMenuItem("About...")};
 
         ButtonGroup difficultyGroup = new ButtonGroup();
@@ -623,6 +631,26 @@ class GameWindow extends JFrame{
         suggested = null;
     }
     
+    /** Recomputes the connection skeleton for both players.
+     *
+     *  The connections belong to whatever position the engine last
+     *  evaluated, so they are refreshed from the current position before
+     *  being drawn; one evaluation is cheap next to a move search. */
+    private void refreshConnections(){
+        if(!showConnections || p == null){
+            skeletons[0] = skeletons[1] = null;
+            return;
+        }
+        try {
+            heuristics.Simulation position = p.getCurrentPosition();
+            position.calculateValue();
+            skeletons[0] = heuristics.Skeleton.of(position, 0);
+            skeletons[1] = heuristics.Skeleton.of(position, 1);
+        } catch (RuntimeException ex) {
+            skeletons[0] = skeletons[1] = null;   // never break the game over a decoration
+        }
+    }
+
     /** Makes the board follow the engine's search as it happens.
      *
      *  The search runs on the event thread, so ordinary repaint requests
@@ -755,7 +783,8 @@ class GameWindow extends JFrame{
         move = p.generateMove(turn);
         long thinkingTime = System.currentTimeMillis() - startTime;
 
-        if(board != null) board.repaint();   // refresh the analysis overlay
+        refreshConnections();
+        if(board != null) board.repaint();   // refresh the overlays
 
         // Show timing in status bar
         changeStatus("Move " + cellName(move[0], move[1]) + " calculated in " + thinkingTime + "ms");
@@ -885,8 +914,64 @@ class GameWindow extends JFrame{
                 }
             }
 
+            if(showConnections) paintConnections((Graphics2D) g);
             if(heuristics.Analysis.isAvailable()) paintAnalysis((Graphics2D) g);
         }
+
+        /** Draws each player's connective structure: groups already bound
+         *  together by a virtual connection, the edges they reach, and the
+         *  empty cells those links depend on. */
+        private void paintConnections(Graphics2D g2){
+            Graphics2D g = (Graphics2D) g2.create();
+            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            for(int color = 0; color <= 1; color++){
+                heuristics.Skeleton skeleton = skeletons[color];
+                if(skeleton == null) continue;
+                Color tint = (color == 1) ? Theme.RED : Theme.BLUE;
+
+                for(heuristics.Skeleton.Link link : skeleton.getLinks()){
+                    // the empty cells holding the link together
+                    g.setColor(new Color(tint.getRed(), tint.getGreen(), tint.getBlue(), 38));
+                    for(heuristics.Square carrier : link.carrier)
+                        g.fill(cellShape(carrier.getRow(), carrier.getColumn(), 25));
+
+                    double x1 = cellX(link.from.getRow(), link.from.getColumn());
+                    double y1 = cellY(link.from.getRow());
+                    double x2, y2;
+                    if(link.toEdge){
+                        double[] end = edgePoint(color, link.farEdge, link.from);
+                        x2 = end[0]; y2 = end[1];
+                    }
+                    else {
+                        x2 = cellX(link.to.getRow(), link.to.getColumn());
+                        y2 = cellY(link.to.getRow());
+                    }
+
+                    g.setColor(new Color(tint.getRed(), tint.getGreen(), tint.getBlue(), 205));
+                    g.setStroke(new BasicStroke(3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND,
+                        10f, new float[]{8f, 6f}, 0f));
+                    g.draw(new java.awt.geom.Line2D.Double(x1, y1, x2, y2));
+                }
+            }
+            g.dispose();
+        }
+
+        /** Where a group-to-edge link should terminate: just outside the
+         *  board on the side that player is trying to reach. */
+        private double[] edgePoint(int color, boolean far, heuristics.Square from){
+            int row = from.getRow(), col = from.getColumn();
+            double margin = 36;
+            if(color == 1)   // vertical player: north at the top, south below
+                return new double[]{ cellX(row, col),
+                    far ? cellY(Dimension - 1) + margin : cellY(0) - margin };
+            // horizontal player: east to the right, west to the left
+            return new double[]{ far ? cellX(row, 0) - margin : cellX(row, Dimension - 1) + margin,
+                cellY(row) };
+        }
+
+        private double cellX(int row, int col){ return layoutHOff + 61.0 * col - 30.5 * row + 25; }
+        private double cellY(int row){ return layoutVOff + 52.5 * row + 22.5; }
 
         /** Paints the engine's reasoning over the board: every candidate the
          *  search actually scored is tinted in the moving player's colour,
@@ -1007,6 +1092,12 @@ class GameWindow extends JFrame{
                         ex.printStackTrace();
                     }
                     break;
+                case 5:
+                    showConnections = ((JCheckBoxMenuItem) e.getSource()).isSelected();
+                    GamePrefs.put(GamePrefs.SHOW_LINKS, showConnections);
+                    refreshConnections();
+                    repaint();
+                    break;
                 case 4:
                     /* Show AI Thinking: the engine only records its reasoning
                      * while this is on, so the overlay appears from the next
@@ -1084,6 +1175,7 @@ class GameWindow extends JFrame{
                  * move, so drop it rather than leave a stale overlay. */
                 heuristics.Analysis.clear();
                 placeStone(column, row);
+                refreshConnections();
 
                 // Forces the redraw
                 Graphics gf = getGraphics();

@@ -60,6 +60,29 @@ because the comparison is the interesting part — you can switch between
 them mid-project and watch the same game play out at very different
 speeds. (Bitmask H-Search supports boards up to 11×11.)
 
+### Seeing the connections
+
+*Hexodus → Show Connections* draws the structure the engine reasons about,
+which is usually invisible on the board:
+
+- A **dashed link** between two of your stone groups means they are already
+  effectively one group — a *virtual connection* the opponent cannot break,
+  even though nothing physically joins them.
+- A link running off the board means that group is already **connected to
+  the edge** it is trying to reach.
+- The **tinted cells** are the connection's carrier: the empty squares the
+  link depends on. Let the opponent take enough of them and the connection
+  is gone.
+
+Both players' structures are shown, so you can see the opponent's
+progress as well as your own. This is the part of Hex that separates
+strong players from beginners — knowing which of your stones are *already*
+joined, and therefore which fights no longer matter.
+
+Under the surface the engine discovers hundreds of connections per
+position, nearly all between empty cells and only meaningful inside the
+search. The board shows the handful that describe the position.
+
 ### Watching the engine think
 
 *Hexodus → Show AI Thinking* turns the board into a view of the search:

@@ -41,6 +41,13 @@ public class Match{
         else throw new IncorrectLevel();
     }
 
+    /** Returns the position the engine currently holds, so the interface
+     *  can show the connections discovered in it
+     *  @return The current simulation */
+    public heuristics.Simulation getCurrentPosition(){
+        return engine.getPosition();
+    }
+
     /** Asks the heuristic to return the best available move for
      *  the player passed as argument
      *  @param player   Player for whom to calculate the move

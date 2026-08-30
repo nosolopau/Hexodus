@@ -18,6 +18,7 @@ final class GamePrefs {
     static final String ALGORITHM  = "algorithmIndex";   // Combo index: 0=Object-Oriented, 1=Bitmask
     static final String SWAP       = "swapRule";
     static final String SHOW_THINKING = "showThinking";  // Analysis overlay on the board
+    static final String SHOW_LINKS    = "showLinks";     // Connection skeleton on the board
     /* Player types are intentionally not persisted: the game always opens
      * on human vs computer so it never starts playing itself on launch. */
 
