@@ -111,8 +111,8 @@ class OptionsDialog extends JDialog{
         Ok.setText("Accept");
         panel.add(Ok);
               
-        ButtonGroup botonesVertical = new ButtonGroup();
-        ButtonGroup botonesHorizontal = new ButtonGroup();
+        ButtonGroup verticalGroup = new ButtonGroup();
+        ButtonGroup horizontalGroup = new ButtonGroup();
         v1 = new JRadioButton("Human");
         v2 = new JRadioButton("Computer");
         h1 = new JRadioButton("Human");
@@ -122,10 +122,10 @@ class OptionsDialog extends JDialog{
          * previous game. */
         v1.setSelected(true);
         h2.setSelected(true);
-        botonesVertical.add(v1);  
-        botonesVertical.add(v2);
-        botonesHorizontal.add(h1);
-        botonesHorizontal.add(h2);
+        verticalGroup.add(v1);  
+        verticalGroup.add(v2);
+        horizontalGroup.add(h1);
+        horizontalGroup.add(h2);
         
         selDimension = new JComboBox();
         for(int i = 0; i < Main.DIMENSIONS.length; i++)
@@ -282,7 +282,7 @@ class AboutDialog extends JDialog{
 /** Class that represents a match and the window used to provide
  *  support for the new game, maintaining interaction with the user */
 class GameWindow extends JFrame{
-    private GameWindow yo;
+    private GameWindow window;
     private JMenu[] menus;
     private BoardPanel board;
     private StatusBar statusBar;
@@ -317,10 +317,10 @@ class GameWindow extends JFrame{
      *  @param typeH    Type of the horizontal player
      *  @param swap     True if the swap rule is enabled, false otherwise
      *  @param difficulty Difficulty level (1 = Normal, 2 = Expert, 3 = Master) */
-    public GameWindow(int dimension, int tipoVertical, int tipoHorizontal, boolean swap, int difficulty){
+    public GameWindow(int dimension, int typeVertical, int typeHorizontal, boolean swap, int difficulty){
         Dimension = dimension;
-        yo = this;
-        newGame(dimension, tipoVertical, tipoHorizontal, swap, difficulty);
+        window = this;
+        newGame(dimension, typeVertical, typeHorizontal, swap, difficulty);
         setResizable(false);
         setTitle("Hexodus");
     }
@@ -886,7 +886,7 @@ class GameWindow extends JFrame{
             case 0:
                 switch(index){
                 case 0:
-                    OptionsDialog dialog = new OptionsDialog(yo);
+                    OptionsDialog dialog = new OptionsDialog(window);
                     dialog.setVisible(true);
                     break;
                 }
@@ -932,7 +932,7 @@ class GameWindow extends JFrame{
             case 2:
                 switch(index){
                 case 0:
-                    AboutDialog acerca = new AboutDialog(yo);
+                    AboutDialog acerca = new AboutDialog(window);
                     acerca.setVisible(true);
                     break;
                 }

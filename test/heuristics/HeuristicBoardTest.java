@@ -146,7 +146,7 @@ public class HeuristicBoardTest {
     @Test
     public void testGetFreeCells_EmptyBoard() {
         // Test getting free cells on empty board
-        ArrayList<Square> freeCells = board5.getCellsLibres();
+        ArrayList<Square> freeCells = board5.getFreeCells();
         assertNotNull(freeCells);
         assertEquals(25, freeCells.size()); // 5x5 = 25 squares
     }
@@ -160,7 +160,7 @@ public class HeuristicBoardTest {
         square1.occupy(1);
         square2.occupy(0);
 
-        ArrayList<Square> freeCells = board5.getCellsLibres();
+        ArrayList<Square> freeCells = board5.getFreeCells();
         assertEquals(23, freeCells.size()); // 25 - 2 = 23 free squares
     }
 
@@ -228,7 +228,7 @@ public class HeuristicBoardTest {
         // Test all aspects of a 3x3 board
         assertEquals(3, board3.getDimension());
 
-        ArrayList<Square> freeCells = board3.getCellsLibres();
+        ArrayList<Square> freeCells = board3.getFreeCells();
         assertEquals(9, freeCells.size());
 
         Square center = board3.get(1, 1);
@@ -242,7 +242,7 @@ public class HeuristicBoardTest {
         // Test all aspects of a 7x7 board
         assertEquals(7, board7.getDimension());
 
-        ArrayList<Square> freeCells = board7.getCellsLibres();
+        ArrayList<Square> freeCells = board7.getFreeCells();
         assertEquals(49, freeCells.size());
 
         Square center = board7.get(3, 3);

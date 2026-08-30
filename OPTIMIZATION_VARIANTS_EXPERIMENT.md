@@ -248,7 +248,7 @@ H-search slice by method:
 
 | Method | Self | Inclusive |
 |---|---|---|
-| AplicarReglaOR (OR-rule recursion) | 10% | **54%** |
+| applyOrRule (OR-rule recursion) | 10% | **54%** |
 | Route.cloneWithoutPath | 1.5% | **40%** |
 | Route.add (+ Path.equals dedup) | 17% + 18% | 36% |
 | calculateResistance (scan machinery) | 32% | — |

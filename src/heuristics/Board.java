@@ -3,7 +3,7 @@ import java.util.*;
 
 /**
  * Represents the virtual board that supports the heuristic, whose
- * caracterstica pueden variar para Representsr la lgica interna del juego.
+ * characteristics may vary to represent the internal logic of the game.
  *
  * @author Pau
  * @version 1.0
@@ -266,7 +266,7 @@ public class Board {
     
     /** Returns a list with the free squares on the board
      *  @return List of free squares */
-    public ArrayList<Square> getCellsLibres(){
+    public ArrayList<Square> getFreeCells(){
         ArrayList<Square> lis = new ArrayList<Square>();
 
         for(int i = 0; i < dimension; i++)
@@ -288,7 +288,7 @@ public class Board {
     /** Populates the provided list with free cells.
      *  Optimization to avoid creating new ArrayList in alpha-beta search.
      *  @param lis ArrayList to populate with free cells */
-    public void getCellsLibresInto(ArrayList<Square> lis){
+    public void getFreeCellsInto(ArrayList<Square> lis){
         for(int i = 0; i < dimension; i++)
             for(int j = 0; j < dimension; j++)
                 if(squares[i][j].isEmpty()) lis.add((Square)squares[i][j]);

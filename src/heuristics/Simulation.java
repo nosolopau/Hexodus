@@ -88,70 +88,70 @@ public class Simulation {
         target.occupy(color);
 
         ArrayList add = new ArrayList();    // List of squares to be added as neighbors
-        Cell vec = null;                       // Used to iterate over the neighbors of obj
+        Cell neighbor = null;                       // Used to iterate over the neighbours of the target cell
         
         affectedNeighbors = new ArrayList<Cell>();
         eliminatedNeighbors = new HashMap();
         eliminatedNeighbors2 = new HashMap();
         
         // Iterate over the neighbors of the cell that was just occupied        
-        Iterator <Cell> itv = target.getNeighborList().iterator();
-        while(itv.hasNext()){
-            vec = itv.next();
+        Iterator <Cell> neighborIt = target.getNeighborList().iterator();
+        while(neighborIt.hasNext()){
+            neighbor = neighborIt.next();
             /* If a neighbor is the same color as the recin inserted it is necessary to
              * remove the old cell (with its possible connections) and transfer
              * its neighbors to the new one. */
-            ArrayList <Cell> remove2 = new ArrayList<Cell>();
+            ArrayList <Cell> pendingRemoval = new ArrayList<Cell>();
             
-            if((vec.getColor() == color) && !(vec instanceof Border)){
-                ArrayList <Cell>Elim = new ArrayList<Cell>();
-                ArrayList <Cell>Elim2 = new ArrayList<Cell>();
+            if((neighbor.getColor() == color) && !(neighbor instanceof Border)){
+                ArrayList <Cell>movedNeighbors = new ArrayList<Cell>();
+                ArrayList <Cell>sharedNeighbors = new ArrayList<Cell>();
                 
-                affectedNeighbors.add(vec);
+                affectedNeighbors.add(neighbor);
                 
                 ArrayList <Cell> remove = new ArrayList<Cell>();
                 
-                Iterator itv2 = vec.getNeighborList().iterator();
-                while(itv2.hasNext()){
-                    Cell vec2 = (Cell)itv2.next();
+                Iterator neighborIt2 = neighbor.getNeighborList().iterator();
+                while(neighborIt2.hasNext()){
+                    Cell neighbor2 = (Cell)neighborIt2.next();
 
-                    if(vec2 != target){
-                        if(vec2.isNeighbor(target)){
-                            Elim2.add(vec2);
+                    if(neighbor2 != target){
+                        if(neighbor2.isNeighbor(target)){
+                            sharedNeighbors.add(neighbor2);
                         }
                         else{
-                            Elim.add(vec2);     
-                            add.add(vec2);  // Cannot be added directly (see below)
+                            movedNeighbors.add(neighbor2);     
+                            add.add(neighbor2);  // Cannot be added directly (see below)
                         }
-                        connections.removeConnection(vec2, vec);  // These operations can be added to Board as is and called from here
-                        remove.add(vec2);
+                        connections.removeConnection(neighbor2, neighbor);  // These operations can be added to Board as is and called from here
+                        remove.add(neighbor2);
                     }
                 }
                 
-                Iterator bor = remove.iterator();
-                while(bor.hasNext()){
-                    Cell prov = (Cell) bor.next();
-                    vec.removeNeighbor(prov);
-                    prov.removeNeighbor(vec);
+                Iterator removalIt = remove.iterator();
+                while(removalIt.hasNext()){
+                    Cell removedNeighbor = (Cell) removalIt.next();
+                    neighbor.removeNeighbor(removedNeighbor);
+                    removedNeighbor.removeNeighbor(neighbor);
                 }
                         
-                addRemoved(eliminatedNeighbors, vec, Elim);
-                addRemoved(eliminatedNeighbors2, vec, Elim2);
-                remove2.add(vec);
+                addRemoved(eliminatedNeighbors, neighbor, movedNeighbors);
+                addRemoved(eliminatedNeighbors2, neighbor, sharedNeighbors);
+                pendingRemoval.add(neighbor);
             }
-            Iterator bor = remove2.iterator();
-            while(bor.hasNext()){
-                Cell prov = (Cell) bor.next();
-                vec.removeNeighbor(prov);
-                prov.removeNeighbor(vec);
+            Iterator removalIt = pendingRemoval.iterator();
+            while(removalIt.hasNext()){
+                Cell removedNeighbor = (Cell) removalIt.next();
+                neighbor.removeNeighbor(removedNeighbor);
+                removedNeighbor.removeNeighbor(neighbor);
             }
         }
         
         /* The neighbors from the intermediate list are added. This is done in two
          * stages to avoid a concurrency problem. */
-        Iterator ita = add.iterator();
-        while(ita.hasNext()){
-            Cell newNeighbor = (Cell)ita.next();
+        Iterator addIt = add.iterator();
+        while(addIt.hasNext()){
+            Cell newNeighbor = (Cell)addIt.next();
             if(target != newNeighbor){    // A cell cannot be neighbor of itself
                 
                 target.addNeighbor(newNeighbor);
@@ -178,11 +178,11 @@ public class Simulation {
 
         try {
             r0 = calculateResistance(0);
-            RestauraPaths();
+            restoreExpiredPaths();
             if(r0 == 0) return 0;
 
             r1 = calculateResistance(1);
-            RestauraPaths();
+            restoreExpiredPaths();
             if(r1 == 0) return Double.POSITIVE_INFINITY;
         } catch (NonexistentSquare ex) {
             ex.printStackTrace();
@@ -208,7 +208,7 @@ public class Simulation {
         double r = Double.POSITIVE_INFINITY;
         try {
             r = calculateResistance(color);
-            RestauraPaths();
+            restoreExpiredPaths();
         } catch (NonexistentSquare ex) {
             ex.printStackTrace();
         }
@@ -218,12 +218,12 @@ public class Simulation {
     private void restoreImpl(){
         long tStart = System.nanoTime();    // Phase timer (instrumentation)
         target.occupy(-1);
-        boolean conectar = false;
+        boolean reconnected = false;
         ArrayList remove = new ArrayList();
         
         Iterator i = affectedNeighbors.iterator();
         while(i.hasNext()){
-            conectar = true;
+            reconnected = true;
             Cell c = (Cell)i.next();
             
             connections.insertDirectPath(target, c);
@@ -257,11 +257,11 @@ public class Simulation {
                 }
             }
             
-            Iterator bor = remove.iterator();
-            while(bor.hasNext()){
-                Cell prov = (Cell) bor.next();
-                target.removeNeighbor(prov);
-                prov.removeNeighbor(target);
+            Iterator removalIt = remove.iterator();
+            while(removalIt.hasNext()){
+                Cell removedNeighbor = (Cell) removalIt.next();
+                target.removeNeighbor(removedNeighbor);
+                removedNeighbor.removeNeighbor(target);
             }
         }
         OptConfig.nsRestore += System.nanoTime() - tStart;
@@ -270,14 +270,14 @@ public class Simulation {
     /** Returns the free squares of the board associated with the simulation
      *  @return ArrayList of free squares */
     public ArrayList<Square> getFreeCells(){
-        return board.getCellsLibres();
+        return board.getFreeCells();
     }
 
     /** Populates the provided list with free cells instead of creating a new ArrayList.
      *  Optimization to avoid object allocation in alpha-beta search.
      *  @param list ArrayList to populate with free cells */
     public void getFreeCellsInto(ArrayList<Square> list){
-        board.getCellsLibresInto(list);
+        board.getFreeCellsInto(list);
     }
     
     /** Adds a removed cell to the list to undo changes
@@ -307,7 +307,7 @@ public class Simulation {
 
         G[color] = board.generateG(color);
         int numNodes = G[color].size();
-        Cell[] ArrayG = (Cell []) G[color].toArray(new Cell [numNodes]);
+        Cell[] nodes = (Cell []) G[color].toArray(new Cell [numNodes]);
         
         Connections SubSC = SC[color];
         Connections SubC;
@@ -343,14 +343,14 @@ public class Simulation {
             iterations++;
             if(OptConfig.USE_DIRTY_SKIP) SubC.refreshNewFlags();
             for(g = 0; g < numNodes; g++){
-                cg = ArrayG[g];
+                cg = nodes[g];
                 for(g1 = 0; g1 < numNodes; g1++){
                     if(g1 != g){
-                        cg1 = ArrayG[g1];
+                        cg1 = nodes[g1];
                         if((!(cg.getColor() == color)) || (cg1.isEmpty())){
                             for(g2 = g1 + 1; g2 < numNodes; g2++){
                                 if(g2 != g){
-                                    cg2 = ArrayG[g2];
+                                    cg2 = nodes[g2];
                                     if((!(cg.getColor() == color)) || (cg2.isEmpty())){
                                         Iterator ic1 = null, ic2 = null;
 
@@ -413,7 +413,7 @@ public class Simulation {
 
                                                                     if(r.add(sc)){
                                                                         Route rsc = r.cloneWithoutPath(sc);
-                                                                        if(AplicarReglaOR(SubC, cg1, cg2, rsc, sc, sc)){
+                                                                        if(applyOrRule(SubC, cg1, cg2, rsc, sc, sc)){
                                                                             OptConfig.nsHSearch += System.nanoTime() - tPhase;
                                                                             return 0;
                                                                         }
@@ -435,9 +435,9 @@ public class Simulation {
             
             /* Marks as old the paths used in the previous iteration
              * and prepares those used in the current one to expire in the next */
-            Iterator cad = expiring.iterator();
-            while(cad.hasNext()){
-                Path mod = (Path)cad.next();
+            Iterator expiringIt = expiring.iterator();
+            while(expiringIt.hasNext()){
+                Path mod = (Path)expiringIt.next();
                 mod.changeNew(false);
                 renew.add(mod);
             }
@@ -498,7 +498,7 @@ public class Simulation {
          * whether connection exists. Notes the index of the ground-connected node to eliminate it
          * and writes the intensity in the node connected to the source. */
         for(int i=0; i<numNodes; i++){
-            Cell c1 = ArrayG[i];
+            Cell c1 = nodes[i];
 
             if(c1 instanceof Border){
                 if(((Border)c1).getName() == ground)
@@ -588,14 +588,14 @@ public class Simulation {
     /** Recursive function that applies the OR rule on a route created by applying
      *  the AND rule. The length of the routes passed to it is limited by K
      *  to prevent the calls from exploding. */
-    private boolean AplicarReglaOR(Connections c, Cell g1, Cell g2, Route sc, Path u, Path i){
+    private boolean applyOrRule(Connections c, Cell g1, Cell g2, Route sc, Path u, Path i){
         if(sc.getLength() > K) return false;
         
         Iterator <Path>isc = sc.getIterator();
         Path sc1 = null;
         Path u1 = null;
         Path i1 = null;
-        Route ruta = null;
+        Route route = null;
 
         while(isc.hasNext()){
             sc1 = isc.next();
@@ -606,8 +606,8 @@ public class Simulation {
                     newsConnections = true;
 
                 }
-                ruta = c.getRoute(g1,g2);
-                ruta.add(u1);
+                route = c.getRoute(g1,g2);
+                route.add(u1);
                 
                 if((g1 instanceof Border) && (g2 instanceof Border)){
                     if((((((Border)g1).getName() == 'N') && (((Border)g2).getName() == 'S')) ||
@@ -620,7 +620,7 @@ public class Simulation {
             else{
                 i1 = i.intersection(sc1);
                 Route rsc = sc.cloneWithoutPath(sc1);
-                if(AplicarReglaOR(c, g1, g2, rsc, u1, i1) == true) return true;
+                if(applyOrRule(c, g1, g2, rsc, u1, i1) == true) return true;
             }
         }
         return false;
@@ -707,10 +707,10 @@ public class Simulation {
     
     /** Takes the paths marked as old and renews them
      *  to prepare them for the next iteration */
-    private void RestauraPaths(){
-        Iterator ren = renew.iterator();
-        while(ren.hasNext()){
-            ((Path)ren.next()).changeNew(true);
+    private void restoreExpiredPaths(){
+        Iterator renewIt = renew.iterator();
+        while(renewIt.hasNext()){
+            ((Path)renewIt.next()).changeNew(true);
         }
     }
 }
