@@ -533,7 +533,7 @@ class GameWindow extends JFrame{
 
         b[suggested[1]][suggested[0]].setIcon(suggestion);
         changeStatus(-1);
-        changeStatus("Suggested (" + suggested[0] + "," + suggested[1] + ") in " + thinkingTime + "ms");
+        changeStatus("Suggested " + cellName(suggested[0], suggested[1]) + " in " + thinkingTime + "ms");
         if(board != null) board.repaint();   // show the reasoning behind the suggestion
     }
     
@@ -573,6 +573,17 @@ class GameWindow extends JFrame{
                 board.paintImmediately(0, 0, board.getWidth(), board.getHeight());
             }
         });
+    }
+
+    /** Formats a cell in the notation normally used for Hex: a letter for
+     *  the column and a number for the row, counting from 1. Board indices
+     *  are zero-based internally, which is not something a player should
+     *  have to know, so (0,0) reads as "a1".
+     *  @param row Zero-based row
+     *  @param column Zero-based column
+     *  @return The cell name, e.g. "d4" */
+    private static String cellName(int row, int column){
+        return (char)('a' + column) + Integer.toString(row + 1);
     }
 
     /** Returns a slightly darker copy of an icon, used to highlight the
@@ -636,7 +647,7 @@ class GameWindow extends JFrame{
         long thinkingTime = System.currentTimeMillis() - startTime;
 
         placeStone(move[1], move[0]);
-        changeStatus("First move (" + move[0] + "," + move[1] + ") calculated in " + thinkingTime + "ms");
+        changeStatus("First move " + cellName(move[0], move[1]) + " calculated in " + thinkingTime + "ms");
 
         swap = new JButton();
         swap.setContentAreaFilled(false);
@@ -668,7 +679,7 @@ class GameWindow extends JFrame{
         if(board != null) board.repaint();   // refresh the analysis overlay
 
         // Show timing in status bar
-        changeStatus("Move (" + move[0] + "," + move[1] + ") calculated in " + thinkingTime + "ms");
+        changeStatus("Move " + cellName(move[0], move[1]) + " calculated in " + thinkingTime + "ms");
 
         placeStone(move[1], move[0]);
         g[move[1]][move[0]].setAllowed(false);
