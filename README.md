@@ -50,15 +50,15 @@ The New Game dialog offers two implementations of the same search:
 
 - **Object-Oriented H-Search** — the original implementation, which
   represents each connection path as a list of cell objects.
-- **Bitmap H-Search** — the same algorithm with paths held as a 128-bit
+- **Bitmask H-Search** — the same algorithm with paths held as a 128-bit
   mask, turning the set operations at the heart of the search into a
   couple of machine instructions.
 
-**Both play identical moves.** The choice affects only speed: Bitmap is
+**Both play identical moves.** The choice affects only speed: Bitmask is
 roughly 5–7× faster and is the default. The slower version is kept
 because the comparison is the interesting part — you can switch between
 them mid-project and watch the same game play out at very different
-speeds. (Bitmap supports boards up to 11×11.)
+speeds. (Bitmask H-Search supports boards up to 11×11.)
 
 ### Watching the engine think
 

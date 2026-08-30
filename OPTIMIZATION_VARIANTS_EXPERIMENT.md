@@ -276,7 +276,7 @@ in scanning clean triples but in the OR-rule's support structures.
 
 `test/heuristics/StrengthComparison.java` plays complete self-play games
 through the real game stack (Match, win detection) for the four selector
-combinations (OO / Bitmap x lean-OR off/on) at each level, recording
+combinations (OO / Bitmask x lean-OR off/on) at each level, recording
 moves, root scores, winner and random-fallback moves.
 
 - **Level 1:** all four combinations play the identical 13-move game,

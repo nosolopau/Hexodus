@@ -48,7 +48,7 @@ public class Main{
 
         /* The startup game honors the selections remembered from the last
          * New Game dialog (defaults: 6x6, human vs computer, swap on,
-         * Normal difficulty, Bitmap H-Search). */
+         * Normal difficulty, Bitmask H-Search). */
         heuristics.OptConfig.USE_BITPATH = (GamePrefs.get(GamePrefs.ALGORITHM, 1) == 1);
 
         int dimIndex = GamePrefs.get(GamePrefs.DIMENSION, DEFAULT_DIMENSION_INDEX);
@@ -114,9 +114,9 @@ class OptionsDialog extends JDialog{
 
         selAlgorithm = new JComboBox();
         selAlgorithm.addItem("Object-Oriented H-Search");
-        selAlgorithm.addItem("Bitmap H-Search");
+        selAlgorithm.addItem("Bitmask H-Search");
         selAlgorithm.setToolTipText("<html>Both play identical moves.<br>"
-            + "Bitmap H-Search analyses about 5x faster.</html>");
+            + "Bitmask H-Search analyses about 5x faster.</html>");
         selAlgorithm.setSelectedIndex(restoreIndex(GamePrefs.ALGORITHM, 1,
             selAlgorithm.getItemCount()));
 

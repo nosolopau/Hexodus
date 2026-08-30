@@ -6,7 +6,7 @@ import java.io.PrintStream;
 
 /**
  * Strength comparison across the four engine combinations
- * (Object-Oriented / Bitmap H-Search, each with and without the lean OR
+ * (Object-Oriented / Bitmask H-Search, each with and without the lean OR
  * rule) at each difficulty level.
  *
  * Plays complete self-play games through the real game stack (Match, with
@@ -26,7 +26,7 @@ public class StrengthComparison {
         int dim = args.length > 0 ? Integer.parseInt(args[0]) : 5;
         int maxLevel = args.length > 1 ? Integer.parseInt(args[1]) : 3;
 
-        String[] names = {"OO H-Search", "OO + leanOR", "Bitmap H-Search", "Bitmap + leanOR"};
+        String[] names = {"OO H-Search", "OO + leanOR", "Bitmask H-Search", "Bitmask + leanOR"};
         boolean[][] flags = { // {bitpath, leanor}
             {false, false}, {false, true}, {true, false}, {true, true}
         };

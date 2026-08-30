@@ -15,7 +15,7 @@ final class GamePrefs {
 
     static final String DIMENSION  = "dimensionIndex";   // Index into Main.DIMENSIONS
     static final String DIFFICULTY = "difficultyIndex";  // Combo index: 0=Normal, 1=Expert, 2=Master
-    static final String ALGORITHM  = "algorithmIndex";   // Combo index: 0=Object-Oriented, 1=Bitmap
+    static final String ALGORITHM  = "algorithmIndex";   // Combo index: 0=Object-Oriented, 1=Bitmask
     static final String SWAP       = "swapRule";
     static final String SHOW_THINKING = "showThinking";  // Analysis overlay on the board
     /* Player types are intentionally not persisted: the game always opens
